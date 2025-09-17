@@ -1,0 +1,396 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LabelList,
+} from 'recharts';
+import { AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { HeaderBrand } from '@/components/HeaderBrand';
+import { IndicatorsData, YearlyIndicators, PeopleIndicators, StrategicLineData } from '@/types';
+
+type AudienceType = 'total' | 'estudiantes' | 'colaboradores';
+
+const STRATEGIC_LINES = [
+  'Apostolado',
+  'Sacramentos',
+  'Crecimiento Espiritual',
+  'Identidad y Comunidad'
+] as const;
+
+export default function IndicatorsModule() {
+  const [selectedAudience, setSelectedAudience] = useState<AudienceType>('total');
+  const [data, setData] = useState<IndicatorsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchIndicators();
+  }, []);
+
+  const fetchIndicators = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await axios.get('/api/indicators');
+      setData(response.data);
+    } catch (error: any) {
+      setError(error.response?.data?.detail || 'Error loading indicators');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Segmented Control Component
+  const SegmentedControl = () => (
+    <div className="flex bg-gray-100 rounded-full p-1 shadow-sm">
+      {(['total', 'estudiantes', 'colaboradores'] as AudienceType[]).map((audience) => (
+        <button
+          key={audience}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+            selectedAudience === audience
+              ? 'bg-black text-white shadow-sm'
+              : 'text-gray-700 hover:bg-neutral-100'
+          }`}
+          onClick={() => setSelectedAudience(audience)}
+        >
+          {audience === 'total' ? 'Total' :
+           audience === 'estudiantes' ? 'Estudiantes' : 'Colaboradores'}
+        </button>
+      ))}
+    </div>
+  );
+
+  // Table Component with Brand Styling
+  const BrandTable = ({
+    data,
+    title,
+    showTotalRow = false
+  }: {
+    data: YearlyIndicators[] | PeopleIndicators[],
+    title?: string,
+    showTotalRow?: boolean
+  }) => {
+    const isYearlyData = data.length > 0 && 'inscripciones' in data[0];
+
+    // Calculate totals for yearly data
+    const totals = isYearlyData && showTotalRow ? (data as YearlyIndicators[]).reduce(
+      (acc, row) => ({
+        inscripciones: acc.inscripciones + row.inscripciones,
+        participaciones: acc.participaciones + row.participaciones,
+        personas: acc.personas + row.personas,
+        tasa: 0 // Will calculate after
+      }),
+      { inscripciones: 0, participaciones: 0, personas: 0, tasa: 0 }
+    ) : null;
+
+    if (totals) {
+      totals.tasa = totals.inscripciones > 0 ?
+        Math.round((totals.participaciones / totals.inscripciones) * 100 * 100) / 100 : 0;
+    }
+
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+        {title && (
+          <div className="p-4 border-b">
+            <h3 className="text-[16px] font-semibold text-brand-text">{title}</h3>
+          </div>
+        )}
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-brand-teal hover:bg-brand-teal">
+              <TableHead scope="col" className="text-white font-bold px-4 py-3 text-left">
+                Año
+              </TableHead>
+              {isYearlyData ? (
+                <>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Inscripciones
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Participaciones
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Personas
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Tasa (%)
+                  </TableHead>
+                </>
+              ) : (
+                <>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Estudiantes
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Colaboradores
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Total
+                  </TableHead>
+                </>
+              )}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.map((row, index) => (
+              <TableRow key={index} className="hover:bg-gray-50">
+                <TableCell className="px-4 py-2 font-medium">
+                  {'year' in row ? row.year : index + 1}
+                </TableCell>
+                {isYearlyData ? (
+                  <>
+                    <TableCell className="px-4 py-2 text-right">
+                      {(row as YearlyIndicators).inscripciones.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right">
+                      {(row as YearlyIndicators).participaciones.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right">
+                      {(row as YearlyIndicators).personas.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right">
+                      {(row as YearlyIndicators).tasa}%
+                    </TableCell>
+                  </>
+                ) : (
+                  <>
+                    <TableCell className="px-4 py-2 text-right">
+                      {(row as PeopleIndicators).estudiantes.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right">
+                      {(row as PeopleIndicators).colaboradores.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-4 py-2 text-right">
+                      {(row as PeopleIndicators).total.toLocaleString()}
+                    </TableCell>
+                  </>
+                )}
+              </TableRow>
+            ))}
+            {totals && (
+              <TableRow className="bg-brand-grayRow hover:bg-brand-grayRow" aria-label="Suma Total">
+                <TableCell className="px-4 py-2 font-semibold">
+                  Suma Total
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right font-semibold">
+                  {totals.inscripciones.toLocaleString()}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right font-semibold">
+                  {totals.participaciones.toLocaleString()}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right font-semibold">
+                  {totals.personas.toLocaleString()}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right font-semibold">
+                  {totals.tasa}%
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
+  // Custom label component for the line chart
+  const CustomLabel = (props: any) => {
+    const { x, y, value } = props;
+    return (
+      <text x={x} y={y - 10} fill="#000" textAnchor="middle" fontSize="12" fontWeight="500">
+        {value}%
+      </text>
+    );
+  };
+
+  // Chart Component
+  const IndicatorsChart = ({ data }: { data: YearlyIndicators[] }) => (
+    <div className="bg-white rounded-2xl shadow-sm border p-6">
+      <h3 className="text-[16px] font-semibold text-brand-text mb-4">
+        Inscripciones, Participaciones, Tasa Conversión y Personas
+      </h3>
+      <ResponsiveContainer width="100%" height={400}>
+        <ComposedChart data={data} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+          <XAxis
+            dataKey="year"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis
+            yAxisId="left"
+            orientation="left"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            domain={[0, 100]}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 12 }}
+            tickFormatter={(value) => `${value}%`}
+          />
+          <Tooltip
+            formatter={(value, name) => {
+              if (name === 'Tasa') return [`${value}%`, name];
+              return [typeof value === 'number' ? value.toLocaleString() : value, name];
+            }}
+            labelFormatter={(label) => `Año ${label}`}
+            contentStyle={{
+              backgroundColor: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '14px'
+            }}
+          />
+          <Legend
+            verticalAlign="top"
+            height={36}
+            iconType="rect"
+            wrapperStyle={{ paddingBottom: '20px' }}
+          />
+          <Bar
+            yAxisId="left"
+            dataKey="inscripciones"
+            fill="#0E6E7E"
+            name="Inscripciones"
+            radius={[2, 2, 0, 0]}
+          />
+          <Bar
+            yAxisId="left"
+            dataKey="participaciones"
+            fill="#7A7A7A"
+            name="Participaciones"
+            radius={[2, 2, 0, 0]}
+          />
+          <Bar
+            yAxisId="left"
+            dataKey="personas"
+            fill="#BDBDBD"
+            name="Personas"
+            radius={[2, 2, 0, 0]}
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="tasa"
+            stroke="#000000"
+            strokeWidth={2}
+            name="Tasa"
+            dot={{ fill: '#000000', r: 4 }}
+          >
+            <LabelList content={CustomLabel} />
+          </Line>
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <HeaderBrand />
+        <div className="max-w-[1200px] mx-auto px-6 py-12">
+          <div className="flex items-center justify-center">
+            <div className="text-lg text-gray-600">Cargando indicadores...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <HeaderBrand />
+        <div className="max-w-[1200px] mx-auto px-6 py-12">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const yearlyData = data.yearly[selectedAudience];
+  const peopleData = data.people;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <HeaderBrand />
+
+      <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-8">
+        {/* Header with segmented control */}
+        <div className="flex justify-end">
+          <SegmentedControl />
+        </div>
+
+        {/* First section: Yearly indicators + Chart */}
+        <div className="grid grid-cols-12 gap-6">
+          <div className="col-span-12 md:col-span-6">
+            <div className="space-y-2">
+              <h2 className="text-[16px] font-semibold text-brand-text">
+                Inscripciones y participaciones por año
+              </h2>
+              <BrandTable data={yearlyData} showTotalRow={true} />
+            </div>
+          </div>
+          <div className="col-span-12 md:col-span-6">
+            <IndicatorsChart data={yearlyData} />
+          </div>
+        </div>
+
+        {/* Second section: People participants */}
+        <div className="space-y-2">
+          <h2 className="text-[16px] font-semibold text-brand-text">
+            Personas participantes por año
+          </h2>
+          <BrandTable data={peopleData} />
+        </div>
+
+        {/* Third section: Strategic lines grid */}
+        <div className="space-y-6">
+          <h2 className="text-[18px] font-semibold text-brand-text">
+            Líneas de acción
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {STRATEGIC_LINES.map((line) => {
+              const lineData = data.strategic[line]?.yearly[selectedAudience] || [];
+              return (
+                <div key={line} className="space-y-2">
+                  <h3 className="text-[16px] font-semibold text-brand-text">
+                    {line}
+                  </h3>
+                  <BrandTable data={lineData} showTotalRow={true} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

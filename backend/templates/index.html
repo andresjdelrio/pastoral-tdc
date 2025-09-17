@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full Stack Application - Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Full Stack Application Backend</h1>
+        <p class="status">✅ Flask API is running successfully!</p>
+        <h2>Available Endpoints:</h2>
+        <ul>
+            <li><code>GET /api/test</code> - Test backend connection</li>
+            <li><code>GET /api/health</code> - Health check</li>
+            <li><code>POST /api/echo</code> - Echo POST data</li>
+        </ul>
+        <p>Frontend is available at: <a href="http://localhost:3000">http://localhost:3000</a></p>
+    </div>
+</body>
+</html>

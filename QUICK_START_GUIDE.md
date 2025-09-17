@@ -113,4 +113,107 @@ Para acceder desde otros computadores en la misma red:
 
 ---
 
+---
+
+## 📊 **Información de la Plataforma**
+
+### 🏷️ **Versión y Estado Actual**
+- **Versión**: v1.2.0 (Septiembre 2025)
+- **Estado**: ✅ **ESTABLE Y FUNCIONANDO**
+- **Última Actualización**: 17 de Septiembre, 2025
+- **Branch Estable**: `backup-working-version-20250917-002913` / `v1.0-stable`
+
+### 🔧 **Especificaciones Técnicas**
+- **Frontend**: React + TypeScript + Vite (Puerto 5173)
+- **Backend**: FastAPI + Python + SQLAlchemy (Puerto 8000)
+- **Base de Datos**: SQLite con migración a PostgreSQL disponible
+- **Diseño**: TailwindCSS + shadcn/ui + Branding Finis Terrae
+
+### 🎨 **Características del Diseño**
+- **Colores Institucionales**:
+  - Teal Finis Terrae (`#0E6E7E`)
+  - Rojo Institucional (`#D7262E`)
+  - Texto Principal (`#1C1C1C`)
+- **Logo**: Integrado en todas las páginas
+- **Responsivo**: Optimizado para escritorio y móvil
+
+---
+
+## 🚀 **Modificaciones y Mejoras Recientes**
+
+### **✨ Septiembre 2025 - Actualización Mayor**
+
+#### **🎨 Diseño y Branding**
+- ✅ **Branding Consistente**: Aplicado diseño institucional Finis Terrae en todos los módulos
+- ✅ **HeaderBrand**: Componente unificado con franja roja, logo y banner teal
+- ✅ **Tablas Profesionales**: Headers con fondo teal y texto blanco
+- ✅ **Filtros Horizontales**: Layout mejorado en módulo de asistencia
+
+#### **📊 Módulo de Indicadores**
+- ✅ **Estructura Unificada**: Todas las líneas estratégicas muestran columnas consistentes
+  - Año, Inscripciones, Participaciones, Personas, Tasa (%)
+- ✅ **Visualización Mejorada**: Charts profesionales con datos completos
+- ✅ **Manejo de Datos Vacíos**: Mensajes informativos para líneas sin datos
+
+#### **🔧 Limpieza de Código**
+- ✅ **Dependencias**: Removidas 9 dependencias no utilizadas (i18n, papaparse)
+- ✅ **Componentes**: Eliminados 3 componentes obsoletos (256 líneas)
+- ✅ **API**: Removidos endpoints deprecated (`/api/uploads/`)
+- ✅ **Modernización**: Solo endpoints modernos (`/api/ingest/`)
+
+#### **📝 Documentación**
+- ✅ **Guía de Inicio**: Documento completo para acceso rápido
+- ✅ **CLAUDE.md**: Instrucciones técnicas para desarrollo
+- ✅ **README.md**: Documentación completa del proyecto
+
+### **🔒 Sistema de Respaldo**
+- **Backup Automático**: Cada cambio mayor tiene respaldo automático
+- **Recuperación Rápida**: Comandos disponibles para volver a versión estable
+- **Git Tags**: Versiones marcadas para fácil acceso
+
+---
+
+## 🛠️ **Estado de Funcionalidades**
+
+### **✅ Módulos Operativos**
+1. **🏠 Inicio**: Dashboard principal con estadísticas
+2. **📊 Indicadores**: Métricas completas por línea estratégica
+3. **📄 Subir CSV**: Upload inteligente con mapeo automático
+4. **👥 Asistencia**: Gestión de participación con filtros
+5. **🗃️ Base de Datos**: Administración completa de registros
+6. **📂 Archivos**: Gestión y descarga de archivos
+
+### **🎯 Líneas Estratégicas Configuradas**
+- **Apostolado** - Actividades apostólicas
+- **Sacramentos** - Actividades sacramentales
+- **Crecimiento Espiritual** - Actividades de crecimiento espiritual
+- **Identidad y Comunidad** - Actividades de identidad y comunidad
+
+### **📈 Analíticas Disponibles**
+- Inscripciones vs Participaciones por año
+- Tasas de conversión por línea estratégica
+- Conteos de personas únicas
+- Filtros por audiencia (Total/Estudiantes/Colaboradores)
+- Gráficos interactivos con datos históricos
+
+---
+
+## 🔄 **Comandos de Recuperación**
+
+Si algo falla, puedes volver a la versión estable:
+
+```bash
+cd "C:\Users\chica\Pastoral_tdc"
+git checkout backup-working-version-20250917-002913
+```
+
+O usar el tag estable:
+```bash
+git checkout v1.0-stable
+```
+
+---
+
 *✨ ¡La plataforma está lista para usar! Desarrollada con ❤️ para la Pastoral Finis Terrae*
+
+*📅 Última actualización: 17 de Septiembre, 2025 | Versión: v1.2.0*

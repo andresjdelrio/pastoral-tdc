@@ -9,6 +9,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   ComposedChart,
   Bar,
   Line,
@@ -20,12 +27,22 @@ import {
   ResponsiveContainer,
   LabelList,
 } from 'recharts';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { HeaderBrand } from '@/components/HeaderBrand';
 import { IndicatorsData, YearlyIndicators, PeopleIndicators, StrategicLineData } from '@/types';
 
 type AudienceType = 'total' | 'estudiantes' | 'colaboradores';
+
+type ActivityData = {
+  id: number;
+  name: string;
+  strategic_line: string;
+  year: number;
+  registrations_count: number;
+  attended_count: number;
+  created_at: string;
+};
 
 const STRATEGIC_LINES = [
   'Apostolado',
@@ -36,12 +53,16 @@ const STRATEGIC_LINES = [
 
 export default function IndicatorsModule() {
   const [selectedAudience, setSelectedAudience] = useState<AudienceType>('total');
+  const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
   const [data, setData] = useState<IndicatorsData | null>(null);
+  const [activitiesData, setActivitiesData] = useState<ActivityData[]>([]);
+  const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchIndicators();
+    fetchActivities();
   }, []);
 
   const fetchIndicators = async () => {
@@ -55,6 +76,88 @@ export default function IndicatorsModule() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const fetchActivities = async () => {
+    try {
+      const response = await axios.get('/api/activities/?per_page=100');
+      setActivitiesData(response.data.items);
+    } catch (error: any) {
+      console.error('Error loading activities:', error);
+    }
+  };
+
+  // Get available years from data
+  const getAvailableYears = (): number[] => {
+    if (!data) return [];
+    const years = new Set<number>();
+
+    // Add years from yearly data
+    Object.values(data.yearly).forEach(audienceData => {
+      audienceData.forEach(yearData => {
+        years.add(yearData.year);
+      });
+    });
+
+    // Add years from activities
+    activitiesData.forEach(activity => {
+      years.add(activity.year);
+    });
+
+    return Array.from(years).sort((a, b) => b - a); // Sort descending
+  };
+
+  // Filter data by selected year
+  const filterDataByYear = (yearlyData: YearlyIndicators[]) => {
+    if (selectedYear === 'all') return yearlyData;
+    return yearlyData.filter(item => item.year === selectedYear);
+  };
+
+  // Toggle expanded state for strategic lines
+  const toggleExpanded = (line: string) => {
+    const newExpanded = new Set(expandedLines);
+    if (newExpanded.has(line)) {
+      newExpanded.delete(line);
+    } else {
+      newExpanded.add(line);
+    }
+    setExpandedLines(newExpanded);
+  };
+
+  // Get activities for a strategic line and year
+  const getActivitiesForLine = (strategicLine: string) => {
+    return activitiesData.filter(activity => {
+      const matchesLine = activity.strategic_line === strategicLine;
+      const matchesYear = selectedYear === 'all' || activity.year === selectedYear;
+      return matchesLine && matchesYear;
+    });
+  };
+
+  // Year Filter Component
+  const YearFilter = () => {
+    const availableYears = getAvailableYears();
+
+    return (
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-brand-text">Año:</span>
+        <Select
+          value={selectedYear.toString()}
+          onValueChange={(value) => setSelectedYear(value === 'all' ? 'all' : parseInt(value))}
+        >
+          <SelectTrigger className="w-[140px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los años</SelectItem>
+            {availableYears.map(year => (
+              <SelectItem key={year} value={year.toString()}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
   };
 
   // Segmented Control Component
@@ -316,6 +419,129 @@ export default function IndicatorsModule() {
     </div>
   );
 
+  // Expandable Strategic Lines Table Component
+  const ExpandableStrategicTable = () => {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-brand-teal hover:bg-brand-teal">
+              <TableHead scope="col" className="text-white font-bold px-6 py-4 text-left w-12">
+                {/* Empty header for expand button */}
+              </TableHead>
+              <TableHead scope="col" className="text-white font-bold px-6 py-4 text-left">
+                Línea Estratégica
+              </TableHead>
+              <TableHead scope="col" className="text-white font-bold px-6 py-4 text-right">
+                Inscripciones
+              </TableHead>
+              <TableHead scope="col" className="text-white font-bold px-6 py-4 text-right">
+                Participaciones
+              </TableHead>
+              <TableHead scope="col" className="text-white font-bold px-6 py-4 text-right">
+                Tasa (%)
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {STRATEGIC_LINES.map((line) => {
+              const lineData = data?.strategic[line]?.yearly[selectedAudience] || [];
+              const filteredLineData = filterDataByYear(lineData);
+              const lineActivities = getActivitiesForLine(line);
+              const isExpanded = expandedLines.has(line);
+
+              // Calculate totals for the strategic line
+              const totals = filteredLineData.reduce(
+                (acc, row) => ({
+                  inscripciones: acc.inscripciones + row.inscripciones,
+                  participaciones: acc.participaciones + row.participaciones
+                }),
+                { inscripciones: 0, participaciones: 0 }
+              );
+              const totalTasa = totals.inscripciones > 0 ?
+                Math.round((totals.participaciones / totals.inscripciones) * 100 * 100) / 100 : 0;
+
+              return (
+                <React.Fragment key={line}>
+                  {/* Strategic Line Row */}
+                  <TableRow
+                    className="hover:bg-gray-50 cursor-pointer border-b-2 border-gray-100"
+                    onClick={() => toggleExpanded(line)}
+                  >
+                    <TableCell className="px-6 py-4">
+                      {lineActivities.length > 0 ? (
+                        isExpanded ? (
+                          <ChevronDown className="h-5 w-5 text-gray-500" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5 text-gray-500" />
+                        )
+                      ) : (
+                        <div className="h-5 w-5" />
+                      )}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 font-semibold text-brand-text">
+                      {line}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right font-medium">
+                      {totals.inscripciones.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right font-medium">
+                      {totals.participaciones.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 text-right font-medium">
+                      {totalTasa}%
+                    </TableCell>
+                  </TableRow>
+
+                  {/* Expanded Activities */}
+                  {isExpanded && lineActivities.map((activity) => {
+                    const tasa = activity.registrations_count > 0 ?
+                      Math.round((activity.attended_count / activity.registrations_count) * 100 * 100) / 100 : 0;
+
+                    return (
+                      <TableRow key={`${activity.id}-${activity.year}`} className="bg-gray-50/50">
+                        <TableCell className="px-6 py-3">
+                          <div className="w-5" />
+                        </TableCell>
+                        <TableCell className="px-6 py-3 pl-12 text-sm text-gray-700">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400">•</span>
+                            <span className="font-medium">{activity.name}</span>
+                            <span className="text-gray-500">- {activity.year}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-3 text-right text-sm">
+                          {activity.registrations_count.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="px-6 py-3 text-right text-sm">
+                          {activity.attended_count.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="px-6 py-3 text-right text-sm">
+                          {tasa}%
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+
+                  {/* Show "No activities" message if expanded but no activities */}
+                  {isExpanded && lineActivities.length === 0 && (
+                    <TableRow className="bg-gray-50/50">
+                      <TableCell className="px-6 py-4" />
+                      <TableCell className="px-6 py-4 pl-12 text-sm text-gray-500 italic" colSpan={4}>
+                        No hay actividades disponibles para esta línea estratégica
+                        {selectedYear !== 'all' && ` en el año ${selectedYear}`}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -353,8 +579,9 @@ export default function IndicatorsModule() {
       <HeaderBrand />
 
       <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-8">
-        {/* Header with segmented control */}
-        <div className="flex justify-end">
+        {/* Header with filters */}
+        <div className="flex justify-between items-center">
+          <YearFilter />
           <SegmentedControl />
         </div>
 
@@ -365,11 +592,11 @@ export default function IndicatorsModule() {
               <h2 className="text-[16px] font-semibold text-brand-text">
                 Inscripciones y participaciones por año
               </h2>
-              <BrandTable data={yearlyData} showTotalRow={true} />
+              <BrandTable data={filterDataByYear(yearlyData)} showTotalRow={true} />
             </div>
           </div>
           <div className="col-span-12 md:col-span-6">
-            <IndicatorsChart data={yearlyData} />
+            <IndicatorsChart data={filterDataByYear(yearlyData)} />
           </div>
         </div>
 
@@ -378,10 +605,10 @@ export default function IndicatorsModule() {
           <h2 className="text-[16px] font-semibold text-brand-text">
             Personas participantes por año
           </h2>
-          <BrandTable data={peopleData} />
+          <BrandTable data={selectedYear === 'all' ? peopleData : peopleData.filter(item => item.year === selectedYear)} />
         </div>
 
-        {/* Third section: Strategic lines grid */}
+        {/* Third section: Original Strategic lines grid */}
         <div className="space-y-6">
           <h2 className="text-[18px] font-semibold text-brand-text">
             Líneas de acción
@@ -389,16 +616,25 @@ export default function IndicatorsModule() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {STRATEGIC_LINES.map((line) => {
               const lineData = data.strategic[line]?.yearly[selectedAudience] || [];
+              const filteredLineData = filterDataByYear(lineData);
               return (
                 <div key={line} className="space-y-2">
                   <h3 className="text-[16px] font-semibold text-brand-text">
                     {line}
                   </h3>
-                  <BrandTable data={lineData} showTotalRow={true} forceYearlyView={true} />
+                  <BrandTable data={filteredLineData} showTotalRow={true} forceYearlyView={true} />
                 </div>
               );
             })}
           </div>
+        </div>
+
+        {/* Fourth section: NEW Expandable Strategic Lines Table */}
+        <div className="space-y-6">
+          <h2 className="text-[18px] font-semibold text-brand-text">
+            Líneas de acción por actividad (Expandible)
+          </h2>
+          <ExpandableStrategicTable />
         </div>
       </div>
     </div>

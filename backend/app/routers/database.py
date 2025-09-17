@@ -100,7 +100,7 @@ async def get_database_records(
     """
     Get all registration records with comprehensive filtering.
     """
-    # Build the base query with joins
+    # FIXED: Include audience field in query to respect user's explicit selection
     query = db.query(
         Registration.id.label('registration_id'),
         Registration.registrant_id,
@@ -113,6 +113,7 @@ async def get_database_records(
         Registrant.career,
         Registrant.phone,
         Registrant.raw_career,
+        Registrant.audience,
         Activity.activity.label('activity_name'),
         Activity.strategic_line,
         Activity.year
@@ -137,78 +138,9 @@ async def get_database_records(
     if activity_id:
         query = query.filter(Registration.activity_id == activity_id)
 
-    # Apply audience filter
+    # FIXED: Filter by saved audience field - respect user's explicit selection during upload
     if audience:
-        if audience.lower() == 'estudiantes':
-            # Filter for students (using inverse of staff classification)
-            query = query.filter(
-                ~(
-                    or_(
-                        Registrant.career.ilike('%profesor%'),
-                        Registrant.career.ilike('%docente%'),
-                        Registrant.career.ilike('%funcionario%'),
-                        Registrant.career.ilike('%administrativo%'),
-                        Registrant.career.ilike('%director%'),
-                        Registrant.career.ilike('%coordinador%'),
-                        Registrant.career.ilike('%jefe%'),
-                        Registrant.career.ilike('%asistente%'),
-                        Registrant.career.ilike('%técnico%'),
-                        Registrant.career.ilike('%empleado%'),
-                        Registrant.career.ilike('%trabajador%'),
-                        Registrant.career.ilike('%staff%'),
-                        Registrant.career.ilike('%colaborador%'),
-                        Registrant.career.ilike('%personal%'),
-                        Registrant.raw_career.ilike('%profesor%'),
-                        Registrant.raw_career.ilike('%docente%'),
-                        Registrant.raw_career.ilike('%funcionario%'),
-                        Registrant.raw_career.ilike('%administrativo%'),
-                        Registrant.raw_career.ilike('%director%'),
-                        Registrant.raw_career.ilike('%coordinador%'),
-                        Registrant.raw_career.ilike('%jefe%'),
-                        Registrant.raw_career.ilike('%asistente%'),
-                        Registrant.raw_career.ilike('%técnico%'),
-                        Registrant.raw_career.ilike('%empleado%'),
-                        Registrant.raw_career.ilike('%trabajador%'),
-                        Registrant.raw_career.ilike('%staff%'),
-                        Registrant.raw_career.ilike('%colaborador%'),
-                        Registrant.raw_career.ilike('%personal%')
-                    )
-                )
-            )
-        elif audience.lower() == 'colaboradores':
-            # Filter for staff/collaborators
-            query = query.filter(
-                or_(
-                    Registrant.career.ilike('%profesor%'),
-                    Registrant.career.ilike('%docente%'),
-                    Registrant.career.ilike('%funcionario%'),
-                    Registrant.career.ilike('%administrativo%'),
-                    Registrant.career.ilike('%director%'),
-                    Registrant.career.ilike('%coordinador%'),
-                    Registrant.career.ilike('%jefe%'),
-                    Registrant.career.ilike('%asistente%'),
-                    Registrant.career.ilike('%técnico%'),
-                    Registrant.career.ilike('%empleado%'),
-                    Registrant.career.ilike('%trabajador%'),
-                    Registrant.career.ilike('%staff%'),
-                    Registrant.career.ilike('%colaborador%'),
-                    Registrant.career.ilike('%personal%'),
-                    Registrant.raw_career.ilike('%profesor%'),
-                    Registrant.raw_career.ilike('%docente%'),
-                    Registrant.raw_career.ilike('%funcionario%'),
-                    Registrant.raw_career.ilike('%administrativo%'),
-                    Registrant.raw_career.ilike('%director%'),
-                    Registrant.raw_career.ilike('%coordinador%'),
-                    Registrant.raw_career.ilike('%jefe%'),
-                    Registrant.raw_career.ilike('%asistente%'),
-                    Registrant.raw_career.ilike('%técnico%'),
-                    Registrant.raw_career.ilike('%empleado%'),
-                    Registrant.raw_career.ilike('%trabajador%'),
-                    Registrant.raw_career.ilike('%staff%'),
-                    Registrant.raw_career.ilike('%colaborador%'),
-                    Registrant.raw_career.ilike('%personal%')
-                )
-            )
+        query = query.filter(Registrant.audience == audience)
 
     # Get total count
     total = query.count()
@@ -218,9 +150,11 @@ async def get_database_records(
     results = query.order_by(Registrant.full_name).offset(offset).limit(per_page).all()
 
     # Format results
+    # FIXED: Use saved audience field - never recalculate from career data
     records = []
     for result in results:
-        audience_classification = classify_audience(result.career, result.raw_career)
+        # Use saved audience field - respect user's explicit selection during upload
+        audience_classification = result.audience or 'estudiantes'
 
         records.append(RegistrationRecord(
             registration_id=result.registration_id,

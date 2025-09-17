@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/indicators", tags=["indicators"])
 
+@router.get("/debug")
+async def debug_endpoint():
+    return {"message": "Debug endpoint working - changes applied", "timestamp": "2025-09-17T16:26:30"}
+
 def classify_audience(career: str, raw_career: str = None) -> str:
     """
     Classify registrant as 'estudiantes' or 'colaboradores' based on career field.
@@ -74,6 +78,7 @@ async def get_indicators(db: Session = Depends(get_db)):
     logger.info("Computing indicators data from database")
 
     # Base query that gets individual classifications only (no 'total' aggregation)
+    # FIXED: Use saved audience field - respect user's explicit selection during upload
     base_query = """
     WITH audience_data AS (
         SELECT
@@ -83,38 +88,7 @@ async def get_indicators(db: Session = Depends(get_db)):
             r.id as registrant_id,
             r.full_name,
             reg.attended,
-            CASE
-                WHEN LOWER(COALESCE(r.career, '')) LIKE '%profesor%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%docente%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%funcionario%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%administrativo%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%director%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%coordinador%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%jefe%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%asistente%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%técnico%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%empleado%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%trabajador%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%staff%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%colaborador%' OR
-                     LOWER(COALESCE(r.career, '')) LIKE '%personal%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%profesor%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%docente%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%funcionario%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%administrativo%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%director%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%coordinador%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%jefe%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%asistente%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%técnico%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%empleado%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%trabajador%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%staff%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%colaborador%' OR
-                     LOWER(COALESCE(r.raw_career, '')) LIKE '%personal%'
-                THEN 'colaboradores'
-                ELSE 'estudiantes'
-            END as audience
+            COALESCE(r.audience, 'estudiantes') as audience
         FROM registrations reg
         JOIN activities a ON reg.activity_id = a.id
         JOIN registrants r ON reg.registrant_id = r.id

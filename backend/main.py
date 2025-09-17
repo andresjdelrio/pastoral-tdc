@@ -1,3 +1,7 @@
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info("[STARTUP DEBUG] Backend is starting up with timestamp 2025-09-17T16:07:25 - FRESH RESTART")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

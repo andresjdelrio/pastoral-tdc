@@ -173,7 +173,7 @@ async def get_activity_registrations(
     if not activity:
         raise HTTPException(status_code=404, detail="Activity not found")
 
-    # Build query
+    # FIXED: Include audience field in query to respect user's explicit selection
     query = db.query(
         Registration.id.label('registration_id'),
         Registration.registrant_id,
@@ -184,7 +184,8 @@ async def get_activity_registrations(
         Registrant.university_email,
         Registrant.rut,
         Registrant.career,
-        Registrant.raw_career
+        Registrant.raw_career,
+        Registrant.audience
     ).join(Registrant).filter(Registration.activity_id == activity_id)
 
     # Apply search filter
@@ -202,78 +203,9 @@ async def get_activity_registrations(
     if only_pending:
         query = query.filter(Registration.attended == False)
 
-    # Apply audience filter
+    # FIXED: Apply audience filter using saved audience field - respect user's explicit selection
     if audience:
-        if audience.lower() == 'estudiantes':
-            # Filter for students (using inverse of staff classification)
-            query = query.filter(
-                ~(
-                    or_(
-                        Registrant.career.ilike('%profesor%'),
-                        Registrant.career.ilike('%docente%'),
-                        Registrant.career.ilike('%funcionario%'),
-                        Registrant.career.ilike('%administrativo%'),
-                        Registrant.career.ilike('%director%'),
-                        Registrant.career.ilike('%coordinador%'),
-                        Registrant.career.ilike('%jefe%'),
-                        Registrant.career.ilike('%asistente%'),
-                        Registrant.career.ilike('%técnico%'),
-                        Registrant.career.ilike('%empleado%'),
-                        Registrant.career.ilike('%trabajador%'),
-                        Registrant.career.ilike('%staff%'),
-                        Registrant.career.ilike('%colaborador%'),
-                        Registrant.career.ilike('%personal%'),
-                        Registrant.raw_career.ilike('%profesor%'),
-                        Registrant.raw_career.ilike('%docente%'),
-                        Registrant.raw_career.ilike('%funcionario%'),
-                        Registrant.raw_career.ilike('%administrativo%'),
-                        Registrant.raw_career.ilike('%director%'),
-                        Registrant.raw_career.ilike('%coordinador%'),
-                        Registrant.raw_career.ilike('%jefe%'),
-                        Registrant.raw_career.ilike('%asistente%'),
-                        Registrant.raw_career.ilike('%técnico%'),
-                        Registrant.raw_career.ilike('%empleado%'),
-                        Registrant.raw_career.ilike('%trabajador%'),
-                        Registrant.raw_career.ilike('%staff%'),
-                        Registrant.raw_career.ilike('%colaborador%'),
-                        Registrant.raw_career.ilike('%personal%')
-                    )
-                )
-            )
-        elif audience.lower() == 'colaboradores':
-            # Filter for staff/collaborators
-            query = query.filter(
-                or_(
-                    Registrant.career.ilike('%profesor%'),
-                    Registrant.career.ilike('%docente%'),
-                    Registrant.career.ilike('%funcionario%'),
-                    Registrant.career.ilike('%administrativo%'),
-                    Registrant.career.ilike('%director%'),
-                    Registrant.career.ilike('%coordinador%'),
-                    Registrant.career.ilike('%jefe%'),
-                    Registrant.career.ilike('%asistente%'),
-                    Registrant.career.ilike('%técnico%'),
-                    Registrant.career.ilike('%empleado%'),
-                    Registrant.career.ilike('%trabajador%'),
-                    Registrant.career.ilike('%staff%'),
-                    Registrant.career.ilike('%colaborador%'),
-                    Registrant.career.ilike('%personal%'),
-                    Registrant.raw_career.ilike('%profesor%'),
-                    Registrant.raw_career.ilike('%docente%'),
-                    Registrant.raw_career.ilike('%funcionario%'),
-                    Registrant.raw_career.ilike('%administrativo%'),
-                    Registrant.raw_career.ilike('%director%'),
-                    Registrant.raw_career.ilike('%coordinador%'),
-                    Registrant.raw_career.ilike('%jefe%'),
-                    Registrant.raw_career.ilike('%asistente%'),
-                    Registrant.raw_career.ilike('%técnico%'),
-                    Registrant.raw_career.ilike('%empleado%'),
-                    Registrant.raw_career.ilike('%trabajador%'),
-                    Registrant.raw_career.ilike('%staff%'),
-                    Registrant.raw_career.ilike('%colaborador%'),
-                    Registrant.raw_career.ilike('%personal%')
-                )
-            )
+        query = query.filter(Registrant.audience == audience)
 
     # Get total count
     total = query.count()
@@ -282,10 +214,11 @@ async def get_activity_registrations(
     offset = (page - 1) * per_page
     results = query.order_by(Registrant.full_name).offset(offset).limit(per_page).all()
 
-    # Format results
+    # FIXED: Use saved audience field - respect user's explicit selection during upload
     registrations = []
     for result in results:
-        person_type = classify_person_type(result.career, result.raw_career)
+        # Use saved audience field to determine person_type (never recalculate from career)
+        person_type = 'student' if result.audience == 'estudiantes' else 'collaborator'
 
         registrations.append({
             "registration_id": result.registration_id,
@@ -336,14 +269,16 @@ async def create_walkin(
     # Validate and normalize the data
     normalized_data, is_valid, field_errors, error_types = validate_and_normalize_row(raw_data)
 
-    # Determine person type
+    # Determine person type and audience
     if walkin_data.person_type:
         person_type = 'student' if walkin_data.person_type == 'student' else 'collaborator'
+        audience = 'estudiantes' if walkin_data.person_type == 'student' else 'colaboradores'
     else:
         person_type = classify_person_type(
             normalized_data.get('career_or_area', ''),
             walkin_data.career_or_area
         )
+        audience = 'estudiantes' if person_type == 'student' else 'colaboradores'
 
     # Try to find existing registrant by RUT or email
     existing_registrant = None
@@ -364,6 +299,9 @@ async def create_walkin(
     # Create or reuse registrant
     if existing_registrant:
         registrant = existing_registrant
+        # Update audience if it's different
+        if registrant.audience != audience:
+            registrant.audience = audience
     else:
         was_existing = False
         registrant = Registrant(
@@ -373,6 +311,7 @@ async def create_walkin(
             career=normalized_data.get('career_or_area'),
             raw_career=walkin_data.career_or_area,
             phone=None,
+            audience=audience,
             row_valid=is_valid,
             validation_errors=str(field_errors) if field_errors else None,
             error_types=','.join(error_types) if error_types else None

@@ -241,6 +241,7 @@ async def upload_csv_with_mappings(
     """
     Upload CSV with validated column mappings and metadata
     """
+    print(f"[DEBUG UPLOAD] Function called with audience: {audience}")
     if not all([strategic_line, activity, year, audience, column_mappings]):
         raise HTTPException(
             status_code=400,
@@ -367,6 +368,9 @@ async def upload_csv_with_mappings(
                     # Backfill normalization fields
                     normalized_data = backfill_normalization_fields(raw_registrant_data)
 
+                    # Override audience with user's explicit selection from metadata
+                    normalized_data['audience'] = audience
+
                     registrant = Registrant(
                         full_name=registrant_data['full_name'],
                         rut=registrant_data.get('rut'),
@@ -444,6 +448,7 @@ async def ingest_csv_with_metadata(
     """
     Complete CSV ingestion with metadata enrichment
     """
+    print(f"[DEBUG CSV] ingest_csv_with_metadata called with audience: {audience}")
     try:
         # Parse and validate column mappings
         mappings = json.loads(column_mappings)
@@ -615,6 +620,8 @@ async def ingest_csv_with_metadata(
                         # Additional data
                         additional_data=json.dumps(additional_data) if additional_data else None
                     )
+                    # Set audience after creation to ensure it's not overridden
+                    registrant.audience = audience
                     db.add(registrant)
                     db.flush()  # Get the ID without committing
                 else:
@@ -633,6 +640,18 @@ async def ingest_csv_with_metadata(
                         registrant.career = normalized_data.get('career_or_area') or registrant.career
                         registrant.phone = normalized_data.get('phone') or registrant.phone
                         registrant.raw_career = normalized_data.get('raw_career') or registrant.raw_career
+                        # Update audience classification
+                        registrant.audience = audience
+
+                # Ensure audience is always updated for existing registrants
+                if registrant.audience != audience:
+                    registrant.audience = audience
+
+                # Force audience update - this ensures it's set regardless of the path
+                print(f"[FINAL DEBUG] Setting registrant {registrant.id} audience to: {audience}")
+                registrant.audience = audience
+                db.flush()  # Ensure changes are persisted to the session
+                print(f"[FINAL DEBUG] Registrant {registrant.id} audience after flush: {registrant.audience}")
 
                 # Create registration
                 registration = Registration(

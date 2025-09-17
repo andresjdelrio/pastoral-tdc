@@ -81,13 +81,15 @@ export default function IndicatorsModule() {
   const BrandTable = ({
     data,
     title,
-    showTotalRow = false
+    showTotalRow = false,
+    forceYearlyView = false
   }: {
     data: YearlyIndicators[] | PeopleIndicators[],
     title?: string,
-    showTotalRow?: boolean
+    showTotalRow?: boolean,
+    forceYearlyView?: boolean
   }) => {
-    const isYearlyData = data.length > 0 && 'inscripciones' in data[0];
+    const isYearlyData = forceYearlyView || (data.length > 0 && 'inscripciones' in data[0]);
 
     // Calculate totals for yearly data
     const totals = isYearlyData && showTotalRow ? (data as YearlyIndicators[]).reduce(
@@ -149,41 +151,49 @@ export default function IndicatorsModule() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((row, index) => (
-              <TableRow key={index} className="hover:bg-gray-50">
-                <TableCell className="px-4 py-2 font-medium">
-                  {'year' in row ? row.year : index + 1}
+            {data.length > 0 ? (
+              data.map((row, index) => (
+                <TableRow key={index} className="hover:bg-gray-50">
+                  <TableCell className="px-4 py-2 font-medium">
+                    {'year' in row ? row.year : index + 1}
+                  </TableCell>
+                  {isYearlyData ? (
+                    <>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as YearlyIndicators).inscripciones.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as YearlyIndicators).participaciones.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as YearlyIndicators).personas.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as YearlyIndicators).tasa}%
+                      </TableCell>
+                    </>
+                  ) : (
+                    <>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as PeopleIndicators).estudiantes.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as PeopleIndicators).colaboradores.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as PeopleIndicators).total.toLocaleString()}
+                      </TableCell>
+                    </>
+                  )}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={isYearlyData ? 5 : 4} className="px-4 py-8 text-center text-gray-500">
+                  No hay datos disponibles para esta línea estratégica
                 </TableCell>
-                {isYearlyData ? (
-                  <>
-                    <TableCell className="px-4 py-2 text-right">
-                      {(row as YearlyIndicators).inscripciones.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right">
-                      {(row as YearlyIndicators).participaciones.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right">
-                      {(row as YearlyIndicators).personas.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right">
-                      {(row as YearlyIndicators).tasa}%
-                    </TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell className="px-4 py-2 text-right">
-                      {(row as PeopleIndicators).estudiantes.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right">
-                      {(row as PeopleIndicators).colaboradores.toLocaleString()}
-                    </TableCell>
-                    <TableCell className="px-4 py-2 text-right">
-                      {(row as PeopleIndicators).total.toLocaleString()}
-                    </TableCell>
-                  </>
-                )}
               </TableRow>
-            ))}
+            )}
             {totals && (
               <TableRow className="bg-brand-grayRow hover:bg-brand-grayRow" aria-label="Suma Total">
                 <TableCell className="px-4 py-2 font-semibold">
@@ -384,7 +394,7 @@ export default function IndicatorsModule() {
                   <h3 className="text-[16px] font-semibold text-brand-text">
                     {line}
                   </h3>
-                  <BrandTable data={lineData} showTotalRow={true} />
+                  <BrandTable data={lineData} showTotalRow={true} forceYearlyView={true} />
                 </div>
               );
             })}

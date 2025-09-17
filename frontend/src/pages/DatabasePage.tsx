@@ -307,41 +307,65 @@ export default function DatabasePage() {
   const uniqueYears = Array.from(new Set(activities.map(a => a.year))).sort((a, b) => b - a);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Database</h1>
-        <p className="text-muted-foreground">
-          Search, filter, and manage registration data
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Brand */}
+      <div className="w-full">
+        <div className="w-full h-1 bg-brand-red"></div>
+        <div className="py-6 bg-white">
+          <img
+            src="/assets/logo-finis.png"
+            alt="Finis Terrae"
+            className="h-14 mx-auto my-3 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const placeholder = document.createElement('div');
+              placeholder.className = 'h-14 w-32 mx-auto bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500';
+              placeholder.textContent = 'LOGO';
+              e.currentTarget.parentNode?.appendChild(placeholder);
+            }}
+          />
+        </div>
+        <div className="w-full bg-brand-teal text-white py-3 text-center">
+          <h1 className="text-lg font-semibold uppercase tracking-wide">
+            DIRECCIÓN DE PASTORAL | BASE DE DATOS
+          </h1>
+        </div>
       </div>
 
-      <Tabs defaultValue="registrations" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="registrations" className="flex items-center gap-2">
-            <Database className="h-4 w-4" />
-            Registrations
-          </TabsTrigger>
-          <TabsTrigger value="name-review" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Name Review
-          </TabsTrigger>
-        </TabsList>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <div className="text-center">
+          <p className="text-gray-700 text-lg">
+            Busca, filtra y gestiona los datos de registros de participantes
+          </p>
+        </div>
+
+        <Tabs defaultValue="registrations" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 bg-white rounded-2xl shadow-sm border">
+            <TabsTrigger value="registrations" className="flex items-center gap-2 data-[state=active]:bg-brand-teal data-[state=active]:text-white">
+              <Database className="h-4 w-4" />
+              Registrations
+            </TabsTrigger>
+            <TabsTrigger value="name-review" className="flex items-center gap-2 data-[state=active]:bg-brand-teal data-[state=active]:text-white">
+              <Users className="h-4 w-4" />
+              Name Review
+            </TabsTrigger>
+          </TabsList>
 
         <TabsContent value="registrations" className="space-y-6">
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </CardTitle>
-          <CardDescription>
-            Use these filters to narrow down the registration data
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Filters */}
+          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div className="p-6 border-b">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-brand-teal" />
+                <h3 className="text-lg font-semibold text-brand-text">Filtros</h3>
+              </div>
+              <p className="text-gray-600 mt-2">
+                Usa estos filtros para buscar y filtrar los datos de registro
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
@@ -404,19 +428,19 @@ export default function DatabasePage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>&nbsp;</Label>
-              <Button
-                variant="outline"
-                onClick={clearFilters}
-                className="w-full"
-              >
-                Clear Filters
-              </Button>
+              <div className="space-y-2">
+                <Label>&nbsp;</Label>
+                <Button
+                  variant="outline"
+                  onClick={clearFilters}
+                  className="w-full border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
       {/* Export and Stats */}
       <div className="flex justify-between items-center">
@@ -424,36 +448,35 @@ export default function DatabasePage() {
           Showing {registrations.length} of {totalItems} registrations
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => handleExport('csv')}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button variant="outline" onClick={() => handleExport('xlsx')}>
-            <Download className="h-4 w-4 mr-2" />
-            Export XLSX
-          </Button>
+            <Button variant="outline" onClick={() => handleExport('csv')} className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white">
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button variant="outline" onClick={() => handleExport('xlsx')} className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white">
+              <Download className="h-4 w-4 mr-2" />
+              Export XLSX
+            </Button>
         </div>
       </div>
 
-      {/* Data Table */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>RUT</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Career</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Activity</TableHead>
-                  <TableHead>Strategic Line</TableHead>
-                  <TableHead>Year</TableHead>
-                  <TableHead>Audience</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Actions</TableHead>
+          {/* Data Table */}
+          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-brand-teal hover:bg-brand-teal">
+                    <TableHead className="text-white font-bold">Name</TableHead>
+                    <TableHead className="text-white font-bold">RUT</TableHead>
+                    <TableHead className="text-white font-bold">Email</TableHead>
+                    <TableHead className="text-white font-bold">Career</TableHead>
+                    <TableHead className="text-white font-bold">Phone</TableHead>
+                    <TableHead className="text-white font-bold">Activity</TableHead>
+                    <TableHead className="text-white font-bold">Strategic Line</TableHead>
+                    <TableHead className="text-white font-bold">Year</TableHead>
+                    <TableHead className="text-white font-bold">Audience</TableHead>
+                    <TableHead className="text-white font-bold">Status</TableHead>
+                    <TableHead className="text-white font-bold">Source</TableHead>
+                    <TableHead className="text-white font-bold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -507,11 +530,10 @@ export default function DatabasePage() {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </CardContent>
-      </Card>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -520,22 +542,24 @@ export default function DatabasePage() {
             Page {currentPage} of {totalPages}
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
           </div>
         </div>
       )}
@@ -547,19 +571,20 @@ export default function DatabasePage() {
             <h3 className="text-lg font-medium">Name Review</h3>
             <p className="text-muted-foreground">Name review functionality temporarily disabled</p>
           </div>
-        </TabsContent>
+          </TabsContent>
 
-      </Tabs>
+        </Tabs>
 
-      <EditModal
-        registration={editingRegistration}
-        isOpen={isEditModalOpen}
-        onClose={() => {
-          setIsEditModalOpen(false);
-          setEditingRegistration(null);
-        }}
-        onSave={handleSaveEdit}
-      />
+        <EditModal
+          registration={editingRegistration}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingRegistration(null);
+          }}
+          onSave={handleSaveEdit}
+        />
+      </div>
     </div>
   );
 }

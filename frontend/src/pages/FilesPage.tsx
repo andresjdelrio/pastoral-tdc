@@ -204,13 +204,37 @@ export default function FilesPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gestión de Archivos</h1>
-        <p className="text-muted-foreground">
-          Administra, descarga y elimina archivos subidos y genera reportes personalizados
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Brand */}
+      <div className="w-full">
+        <div className="w-full h-1 bg-brand-red"></div>
+        <div className="py-6 bg-white">
+          <img
+            src="/assets/logo-finis.png"
+            alt="Finis Terrae"
+            className="h-14 mx-auto my-3 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const placeholder = document.createElement('div');
+              placeholder.className = 'h-14 w-32 mx-auto bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500';
+              placeholder.textContent = 'LOGO';
+              e.currentTarget.parentNode?.appendChild(placeholder);
+            }}
+          />
+        </div>
+        <div className="w-full bg-brand-teal text-white py-3 text-center">
+          <h1 className="text-lg font-semibold uppercase tracking-wide">
+            DIRECCIÓN DE PASTORAL | GESTIÓN DE ARCHIVOS
+          </h1>
+        </div>
       </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <div className="text-center">
+          <p className="text-gray-700 text-lg">
+            Administra, descarga y elimina archivos subidos y genera reportes personalizados
+          </p>
+        </div>
 
       {error && (
         <Alert variant="destructive">
@@ -219,15 +243,15 @@ export default function FilesPage() {
         </Alert>
       )}
 
-      {/* Filters and Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros y Acciones
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        {/* Filters and Actions */}
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div className="p-6 border-b">
+            <div className="flex items-center gap-2">
+              <Filter className="h-5 w-5 text-brand-teal" />
+              <h3 className="text-lg font-semibold text-brand-text">Filtros y Acciones</h3>
+            </div>
+          </div>
+          <div className="p-6 space-y-4">
           {/* Filters Row */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
@@ -295,18 +319,18 @@ export default function FilesPage() {
               Generar Reporte
             </Button>
           </div>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
 
-      {/* Files Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Archivos Subidos</CardTitle>
-          <CardDescription>
-            {files.length} archivos encontrados
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Files Table */}
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div className="p-6 border-b">
+            <h3 className="text-lg font-semibold text-brand-text">Archivos Subidos</h3>
+            <p className="text-gray-600 mt-2">
+              {files.length} archivos encontrados
+            </p>
+          </div>
+          <div className="p-6">
           {loading ? (
             <div className="text-center py-8">Cargando archivos...</div>
           ) : files.length === 0 ? (
@@ -315,33 +339,33 @@ export default function FilesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={toggleAllSelection}
-                        className="h-8 w-8 p-0"
-                      >
-                        {selectedFiles.size === files.length ?
-                          <CheckSquare className="h-4 w-4" /> :
-                          <Square className="h-4 w-4" />
-                        }
-                      </Button>
-                    </TableHead>
-                    <TableHead>Archivo</TableHead>
-                    <TableHead>Actividad</TableHead>
-                    <TableHead>Línea</TableHead>
-                    <TableHead>Año</TableHead>
-                    <TableHead>Audiencia</TableHead>
-                    <TableHead>Registros</TableHead>
-                    <TableHead>Validación</TableHead>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-brand-teal hover:bg-brand-teal">
+                      <TableHead className="w-12 text-white font-bold">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={toggleAllSelection}
+                          className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                        >
+                          {selectedFiles.size === files.length ?
+                            <CheckSquare className="h-4 w-4" /> :
+                            <Square className="h-4 w-4" />
+                          }
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-white font-bold">Archivo</TableHead>
+                      <TableHead className="text-white font-bold">Actividad</TableHead>
+                      <TableHead className="text-white font-bold">Línea</TableHead>
+                      <TableHead className="text-white font-bold">Año</TableHead>
+                      <TableHead className="text-white font-bold">Audiencia</TableHead>
+                      <TableHead className="text-white font-bold">Registros</TableHead>
+                      <TableHead className="text-white font-bold">Validación</TableHead>
+                      <TableHead className="text-white font-bold">Fecha</TableHead>
+                      <TableHead className="text-white font-bold">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {files.map((file) => (
                     <TableRow key={file.id}>
@@ -454,8 +478,8 @@ export default function FilesPage() {
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -560,6 +584,7 @@ export default function FilesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

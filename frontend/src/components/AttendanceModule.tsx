@@ -271,34 +271,61 @@ export default function AttendanceModule() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Gestión de Asistencia</h1>
-        <p className="text-muted-foreground">
-          Controla la asistencia a eventos y registra participantes de walk-in
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Brand */}
+      <div className="w-full">
+        <div className="w-full h-1 bg-brand-red"></div>
+        <div className="py-6 bg-white">
+          <img
+            src="/assets/logo-finis.png"
+            alt="Finis Terrae"
+            className="h-14 mx-auto my-3 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const placeholder = document.createElement('div');
+              placeholder.className = 'h-14 w-32 mx-auto bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500';
+              placeholder.textContent = 'LOGO';
+              e.currentTarget.parentNode?.appendChild(placeholder);
+            }}
+          />
+        </div>
+        <div className="w-full bg-brand-teal text-white py-3 text-center">
+          <h1 className="text-lg font-semibold uppercase tracking-wide">
+            DIRECCIÓN DE PASTORAL | GESTIÓN DE ASISTENCIA
+          </h1>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Left Sidebar - Filters */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Search className="h-5 w-5" />
-                <span>Filtros</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Activity Selector */}
-              <div>
-                <label className="text-sm font-medium">Actividad</label>
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+        <div className="text-center">
+          <p className="text-gray-700 text-lg">
+            Controla la asistencia a eventos y registra participantes de walk-in
+          </p>
+        </div>
+
+        {/* Horizontal Filters */}
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div className="p-6 border-b">
+            <div className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-brand-teal" />
+              <h3 className="text-lg font-semibold text-brand-text">Filtros</h3>
+            </div>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Activity Search */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Buscar Actividad</label>
                 <Input
                   placeholder="Buscar actividad..."
                   value={activitySearch}
                   onChange={(e) => setActivitySearch(e.target.value)}
-                  className="mb-2"
                 />
+              </div>
+
+              {/* Activity Selector */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Actividad</label>
                 <Select onValueChange={handleActivitySelect}>
                   <SelectTrigger>
                     <SelectValue placeholder="Seleccionar actividad" />
@@ -319,7 +346,7 @@ export default function AttendanceModule() {
               </div>
 
               {/* Year Filter */}
-              <div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Año</label>
                 <Select onValueChange={(value) => setFilters(prev => ({ ...prev, year: value === 'all' ? null : (value ? parseInt(value) : null) }))}>
                   <SelectTrigger>
@@ -335,7 +362,7 @@ export default function AttendanceModule() {
               </div>
 
               {/* Strategic Line Filter */}
-              <div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Línea Estratégica</label>
                 <Select onValueChange={(value) => setFilters(prev => ({ ...prev, strategicLine: value === 'all' ? null : (value || null) }))}>
                   <SelectTrigger>
@@ -352,7 +379,7 @@ export default function AttendanceModule() {
               </div>
 
               {/* Search Registrations */}
-              <div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Buscar Persona</label>
                 <Input
                   placeholder="Nombre, RUT, email..."
@@ -361,8 +388,12 @@ export default function AttendanceModule() {
                 />
               </div>
 
+            </div>
+
+            {/* Second row for additional filters */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
               {/* Audience Filter */}
-              <div>
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Audiencia</label>
                 <Select onValueChange={(value) => setFilters(prev => ({ ...prev, audience: value === 'all' ? null : (value || null) }))}>
                   <SelectTrigger>
@@ -377,32 +408,39 @@ export default function AttendanceModule() {
               </div>
 
               {/* Only Pending Filter */}
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="onlyPending"
-                  checked={filters.onlyPending}
-                  onChange={(e) => setFilters(prev => ({ ...prev, onlyPending: e.target.checked }))}
-                />
-                <label htmlFor="onlyPending" className="text-sm">Solo pendientes</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Opciones</label>
+                <div className="flex items-center space-x-2 pt-2">
+                  <input
+                    type="checkbox"
+                    id="onlyPending"
+                    checked={filters.onlyPending}
+                    onChange={(e) => setFilters(prev => ({ ...prev, onlyPending: e.target.checked }))}
+                    className="rounded border-gray-300 text-brand-teal focus:ring-brand-teal"
+                  />
+                  <label htmlFor="onlyPending" className="text-sm">Solo pendientes</label>
+                </div>
               </div>
 
-              {selectedActivity && (
-                <div className="bg-blue-50 p-3 rounded-lg">
-                  <h4 className="font-medium text-blue-900">{selectedActivity.name}</h4>
-                  <p className="text-sm text-blue-700">{selectedActivity.strategic_line} - {selectedActivity.year}</p>
-                  <div className="flex justify-between mt-2 text-sm">
-                    <span>Asistieron: {selectedActivity.attended_count}</span>
-                    <span>Total: {selectedActivity.registrations_count}</span>
-                  </div>
+              <div></div> {/* Empty column for spacing */}
+            </div>
+
+            {/* Selected Activity Info */}
+            {selectedActivity && (
+              <div className="mt-4 bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-blue-900">{selectedActivity.name}</h4>
+                <p className="text-sm text-blue-700">{selectedActivity.strategic_line} - {selectedActivity.year}</p>
+                <div className="flex justify-between mt-2 text-sm">
+                  <span>Asistieron: {selectedActivity.attended_count}</span>
+                  <span>Total: {selectedActivity.registrations_count}</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Main Content - Registration Table */}
-        <div className="lg:col-span-3">
+        <div>
           {error && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -410,39 +448,39 @@ export default function AttendanceModule() {
             </Alert>
           )}
 
-          {selectedActivity ? (
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Users className="h-5 w-5" />
-                      <span>Registros - {selectedActivity.name}</span>
-                    </CardTitle>
-                    <CardDescription>
-                      {registrations.length} registros mostrados
-                    </CardDescription>
+            {selectedActivity ? (
+              <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div className="p-6 border-b">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <Users className="h-5 w-5 text-brand-teal" />
+                        <h3 className="text-lg font-semibold text-brand-text">Registros - {selectedActivity.name}</h3>
+                      </div>
+                      <p className="text-gray-600 mt-2">
+                        {registrations.length} registros mostrados
+                      </p>
+                    </div>
+                    <Button onClick={() => setShowWalkInModal(true)} className="flex items-center space-x-2 bg-brand-teal hover:bg-brand-tealDark text-white">
+                      <UserPlus className="h-4 w-4" />
+                      <span>Agregar Walk-in</span>
+                    </Button>
                   </div>
-                  <Button onClick={() => setShowWalkInModal(true)} className="flex items-center space-x-2">
-                    <UserPlus className="h-4 w-4" />
-                    <span>Agregar Walk-in</span>
-                  </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
+                <div className="p-6">
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>RUT</TableHead>
-                        <TableHead>Carrera</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Asistencia</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                      <TableHeader>
+                        <TableRow className="bg-brand-teal hover:bg-brand-teal">
+                          <TableHead className="text-white font-bold">Nombre</TableHead>
+                          <TableHead className="text-white font-bold">Email</TableHead>
+                          <TableHead className="text-white font-bold">RUT</TableHead>
+                          <TableHead className="text-white font-bold">Carrera</TableHead>
+                          <TableHead className="text-white font-bold">Tipo</TableHead>
+                          <TableHead className="text-white font-bold">Estado</TableHead>
+                          <TableHead className="text-white font-bold">Asistencia</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
                       {isLoading ? (
                         Array.from({ length: 5 }).map((_, i) => (
@@ -506,22 +544,22 @@ export default function AttendanceModule() {
                       Siguiente
                     </Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Selecciona una Actividad</h3>
-                <p className="text-gray-500">
-                  Elige una actividad del panel lateral para ver y gestionar la asistencia
-                </p>
-              </CardContent>
-            </Card>
-          )}
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div className="p-12 text-center">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-brand-text mb-2">Selecciona una Actividad</h3>
+                  <p className="text-gray-600">
+                    Elige una actividad del panel lateral para ver y gestionar la asistencia
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Walk-in Modal */}
       <Dialog open={showWalkInModal} onOpenChange={setShowWalkInModal}>

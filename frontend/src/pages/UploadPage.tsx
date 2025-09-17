@@ -157,7 +157,7 @@ export default function UploadPage() {
             <div className={`
               flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors
               ${index <= currentIndex
-                ? 'bg-primary border-primary text-primary-foreground'
+                ? 'bg-brand-teal border-brand-teal text-white'
                 : 'border-gray-300 text-gray-400'
               }
             `}>
@@ -171,7 +171,7 @@ export default function UploadPage() {
               {step.label}
             </span>
             {index < steps.length - 1 && (
-              <div className={`w-8 h-0.5 mx-4 ${index < currentIndex ? 'bg-primary' : 'bg-gray-300'}`} />
+              <div className={`w-8 h-0.5 mx-4 ${index < currentIndex ? 'bg-brand-teal' : 'bg-gray-300'}`} />
             )}
           </div>
         ))}
@@ -180,13 +180,37 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Subir CSV</h1>
-        <p className="text-muted-foreground">
-          Sube archivos CSV exportados de Google Forms y mapea las columnas a los campos del sistema
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Brand */}
+      <div className="w-full">
+        <div className="w-full h-1 bg-brand-red"></div>
+        <div className="py-6 bg-white">
+          <img
+            src="/assets/logo-finis.png"
+            alt="Finis Terrae"
+            className="h-14 mx-auto my-3 object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const placeholder = document.createElement('div');
+              placeholder.className = 'h-14 w-32 mx-auto bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500';
+              placeholder.textContent = 'LOGO';
+              e.currentTarget.parentNode?.appendChild(placeholder);
+            }}
+          />
+        </div>
+        <div className="w-full bg-brand-teal text-white py-3 text-center">
+          <h1 className="text-lg font-semibold uppercase tracking-wide">
+            DIRECCIÓN DE PASTORAL | SUBIR ARCHIVO CSV
+          </h1>
+        </div>
       </div>
+
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-6">
+        <div className="text-center">
+          <p className="text-gray-700 text-lg">
+            Sube archivos CSV exportados de Google Forms y mapea las columnas a los campos del sistema
+          </p>
+        </div>
 
       {renderStepIndicator()}
 
@@ -197,45 +221,45 @@ export default function UploadPage() {
         </Alert>
       )}
 
-      {/* Step 1: File Upload */}
-      {currentStep === STEPS.UPLOAD && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Seleccionar Archivo CSV</CardTitle>
-            <CardDescription>
-              Arrastra y suelta un archivo CSV o haz clic para seleccionar
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div
-              {...getRootProps()}
-              className={`
-                border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-                ${isDragActive ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-gray-400'}
-                ${isLoading ? 'pointer-events-none opacity-50' : ''}
-              `}
-            >
-              <input {...getInputProps()} />
-              <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              {isDragActive ? (
-                <p>Suelta el archivo aquí...</p>
-              ) : (
-                <div>
-                  <p className="text-lg mb-2">
-                    {isLoading ? 'Procesando archivo...' : 'Arrastra un archivo CSV aquí'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    o haz clic para seleccionar un archivo
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Solo archivos CSV (máximo 10MB)
-                  </p>
-                </div>
-              )}
+        {/* Step 1: File Upload */}
+        {currentStep === STEPS.UPLOAD && (
+          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div className="p-6 border-b">
+              <h3 className="text-xl font-semibold text-brand-text">Seleccionar Archivo CSV</h3>
+              <p className="text-gray-600 mt-2">
+                Arrastra y suelta un archivo CSV o haz clic para seleccionar
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div className="p-6">
+              <div
+                {...getRootProps()}
+                className={`
+                  border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+                  ${isDragActive ? 'border-brand-teal bg-brand-teal/5' : 'border-gray-300 hover:border-gray-400'}
+                  ${isLoading ? 'pointer-events-none opacity-50' : ''}
+                `}
+              >
+                <input {...getInputProps()} />
+                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                {isDragActive ? (
+                  <p>Suelta el archivo aquí...</p>
+                ) : (
+                  <div>
+                    <p className="text-lg mb-2">
+                      {isLoading ? 'Procesando archivo...' : 'Arrastra un archivo CSV aquí'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      o haz clic para seleccionar un archivo
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Solo archivos CSV (máximo 10MB)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Step 2: Column Mapping */}
       {currentStep === STEPS.MAPPING && preview && (
@@ -248,19 +272,19 @@ export default function UploadPage() {
         />
       )}
 
-      {/* Step 3: Upload Complete */}
-      {currentStep === STEPS.COMPLETE && uploadResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <CheckCircle className="h-6 w-6 text-green-500" />
-              <span>Subida Completada</span>
-            </CardTitle>
-            <CardDescription>
-              El archivo CSV ha sido procesado exitosamente
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {/* Step 3: Upload Complete */}
+        {currentStep === STEPS.COMPLETE && uploadResult && (
+          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div className="p-6 border-b">
+              <div className="flex items-center space-x-3">
+                <CheckCircle className="h-6 w-6 text-green-500" />
+                <h3 className="text-xl font-semibold text-brand-text">Subida Completada</h3>
+              </div>
+              <p className="text-gray-600 mt-2">
+                El archivo CSV ha sido procesado exitosamente
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-green-50 p-4 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
@@ -399,27 +423,28 @@ export default function UploadPage() {
               </div>
             )}
 
-            <div className="flex justify-center">
-              <Button onClick={resetUpload}>
-                Subir Otro Archivo
-              </Button>
+              <div className="flex justify-center">
+                <Button onClick={resetUpload} className="bg-brand-teal hover:bg-brand-tealDark text-white">
+                  Subir Otro Archivo
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Recent Uploads - Only show if not in the middle of upload process */}
-      {currentStep === STEPS.UPLOAD && (
-        <RecentUploads />
-      )}
+        {/* Recent Uploads - Only show if not in the middle of upload process */}
+        {currentStep === STEPS.UPLOAD && (
+          <RecentUploads />
+        )}
 
-      {/* Metadata Modal */}
-      <MetadataModal
-        isOpen={showMetadataModal}
-        onClose={() => setShowMetadataModal(false)}
-        onConfirm={handleMetadataConfirm}
-        isLoading={isLoading}
-      />
+        {/* Metadata Modal */}
+        <MetadataModal
+          isOpen={showMetadataModal}
+          onClose={() => setShowMetadataModal(false)}
+          onConfirm={handleMetadataConfirm}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 }

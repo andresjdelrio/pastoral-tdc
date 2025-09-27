@@ -8,7 +8,8 @@ import {
   Settings,
   TrendingUp,
   UserCheck,
-  FolderOpen
+  FolderOpen,
+  UserX
 } from 'lucide-react';
 
 export function Navigation() {
@@ -21,6 +22,7 @@ export function Navigation() {
     { name: 'Attendance', href: '/attendance', icon: UserCheck },
     { name: 'Database', href: '/database', icon: Users },
     { name: 'Files', href: '/files', icon: FolderOpen },
+    { name: 'Duplicate Review', href: '/duplicate-review', icon: UserX },
     { name: 'Admin', href: '/admin', icon: Settings },
   ];
 

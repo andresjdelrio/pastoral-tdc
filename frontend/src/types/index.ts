@@ -79,12 +79,20 @@ export interface ValidationSummary {
   validation_rate: number;
 }
 
+export interface DuplicateDetectionResult {
+  within_upload: number;
+  against_existing: number;
+  total_added_to_queue: number;
+  method_used: string;
+}
+
 export interface UploadResult {
   message: string;
   activity_id: number;
   registrations_created: number;
   upload_id: number;
   validation_summary: ValidationSummary;
+  duplicate_detection: DuplicateDetectionResult;
   metadata: {
     strategic_line: string;
     activity: string;
@@ -102,14 +110,18 @@ export interface YearlyIndicators {
   inscripciones: number;
   participaciones: number;
   tasa: number;
-  personas: number;
+  personas_inscritas: number;
+  personas_participantes: number;
 }
 
 export interface PeopleIndicators {
   year: number;
-  estudiantes: number;
-  colaboradores: number;
-  total: number;
+  estudiantes_inscritas: number;
+  estudiantes_participantes: number;
+  colaboradores_inscritas: number;
+  colaboradores_participantes: number;
+  total_inscritas: number;
+  total_participantes: number;
 }
 
 export interface AudienceData {

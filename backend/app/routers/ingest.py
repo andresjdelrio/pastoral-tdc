@@ -717,6 +717,27 @@ async def ingest_csv_with_metadata(
         # Commit all changes
         db.commit()
 
+        # Process duplicate detection for newly created registrants
+        duplicate_result = {'total_added_to_queue': 0, 'method_used': 'none'}
+        try:
+            from app.services.duplicate_detection import DuplicateDetectionService
+
+            # Get all registrants created in this upload
+            new_registrants = db.query(Registrant).join(Registration).filter(
+                Registration.activity_id == activity_record.id
+            ).all()
+
+            if new_registrants:
+                dup_service = DuplicateDetectionService(db)
+                duplicate_result = dup_service.process_upload_for_duplicates(
+                    new_registrants=new_registrants,
+                    activity_id=activity_record.id,
+                    audience=audience
+                )
+                logger.info(f"Duplicate detection results: {duplicate_result}")
+        except Exception as e:
+            logger.warning(f"Duplicate detection failed but upload succeeded: {e}")
+
         # Invalidate cache since new data was ingested
         invalidate_on_data_change()
 
@@ -731,6 +752,7 @@ async def ingest_csv_with_metadata(
                 "invalid_rows": invalid_records,
                 "validation_rate": round((valid_records / len(df)) * 100, 2) if len(df) > 0 else 0
             },
+            "duplicate_detection": duplicate_result,
             "metadata": {
                 "strategic_line": strategic_line,
                 "activity": activity,

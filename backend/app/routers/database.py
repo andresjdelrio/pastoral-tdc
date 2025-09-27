@@ -43,6 +43,7 @@ class UpdateRegistrantRequest(BaseModel):
     university_email: Optional[str] = Field(None, max_length=200)
     career: str = Field(..., min_length=1, max_length=200)
     phone: Optional[str] = Field(None, max_length=20)
+    audience: Optional[str] = Field(None, max_length=20, description="Audience classification: estudiantes or colaboradores")
 
 class PaginatedResponse(BaseModel):
     items: List[RegistrationRecord]
@@ -203,7 +204,8 @@ async def update_registrant(
         'rut': registrant.rut,
         'university_email': registrant.university_email,
         'career': registrant.career,
-        'phone': registrant.phone
+        'phone': registrant.phone,
+        'audience': registrant.audience
     }
 
     # Update fields
@@ -213,9 +215,13 @@ async def update_registrant(
     registrant.career = update_data.career
     registrant.phone = update_data.phone
 
+    # Update audience if provided
+    if update_data.audience is not None:
+        registrant.audience = update_data.audience
+
     # Create audit log entries for changed fields
     audit_logs = []
-    for field, new_value in update_data.dict().items():
+    for field, new_value in update_data.dict(exclude_unset=True).items():
         old_value = old_values.get(field)
         if old_value != new_value:
             # In a real application, you'd get the user ID from authentication
@@ -245,6 +251,7 @@ async def update_registrant(
         "university_email": registrant.university_email,
         "career": registrant.career,
         "phone": registrant.phone,
+        "audience": registrant.audience,
         "audit_logs": audit_logs
     }
 
@@ -351,3 +358,90 @@ async def export_xlsx(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=registrations_database.xlsx"}
     )
+
+@router.delete("/registrations/{registration_id}")
+async def delete_registration(
+    registration_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a specific registration record.
+    """
+    # Find the registration
+    registration = db.query(Registration).filter(Registration.id == registration_id).first()
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+
+    # Store data for audit logging before deletion
+    registrant = db.query(Registrant).filter(Registrant.id == registration.registrant_id).first()
+    activity = db.query(Activity).filter(Activity.id == registration.activity_id).first()
+
+    audit_data = {
+        'registration_id': registration.id,
+        'registrant_name': registrant.full_name if registrant else None,
+        'activity_name': activity.activity if activity else None,
+        'deleted_by': 'system',  # Replace with actual user ID/name
+        'deleted_at': datetime.utcnow()
+    }
+
+    # Delete the registration
+    db.delete(registration)
+    db.commit()
+
+    # Log the deletion
+    logger.info(f"Audit: Registration {registration_id} deleted - Registrant: {audit_data['registrant_name']}, Activity: {audit_data['activity_name']}")
+
+    # Invalidate cache since data changed
+    invalidate_on_data_change()
+
+    return {
+        "success": True,
+        "message": f"Registration {registration_id} deleted successfully",
+        "audit_info": audit_data
+    }
+
+@router.delete("/registrants/{registrant_id}")
+async def delete_registrant(
+    registrant_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a registrant and all their associated registrations.
+    """
+    # Find the registrant
+    registrant = db.query(Registrant).filter(Registrant.id == registrant_id).first()
+    if not registrant:
+        raise HTTPException(status_code=404, detail="Registrant not found")
+
+    # Get all registrations for this registrant
+    registrations = db.query(Registration).filter(Registration.registrant_id == registrant_id).all()
+    registration_count = len(registrations)
+
+    # Store data for audit logging before deletion
+    audit_data = {
+        'registrant_id': registrant.id,
+        'registrant_name': registrant.full_name,
+        'registration_count': registration_count,
+        'deleted_by': 'system',  # Replace with actual user ID/name
+        'deleted_at': datetime.utcnow()
+    }
+
+    # Delete all registrations first (due to foreign key constraints)
+    for registration in registrations:
+        db.delete(registration)
+
+    # Delete the registrant
+    db.delete(registrant)
+    db.commit()
+
+    # Log the deletion
+    logger.info(f"Audit: Registrant {registrant_id} ({registrant.full_name}) deleted with {registration_count} registrations")
+
+    # Invalidate cache since data changed
+    invalidate_on_data_change()
+
+    return {
+        "success": True,
+        "message": f"Registrant '{registrant.full_name}' and {registration_count} associated registrations deleted successfully",
+        "audit_info": audit_data
+    }

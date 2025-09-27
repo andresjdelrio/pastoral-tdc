@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Download, Edit, Search, Filter, ChevronLeft, ChevronRight, Database, Users } from 'lucide-react';
+import { Download, Edit, Search, Filter, ChevronLeft, ChevronRight, Database, Users, Trash2, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import axios from 'axios';
 
@@ -55,6 +55,14 @@ interface EditModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedRegistration: RegistrationRecord) => void;
+}
+
+interface DeleteConfirmationProps {
+  registration: RegistrationRecord | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
 }
 
 function EditModal({ registration, isOpen, onClose, onSave }: EditModalProps) {
@@ -171,6 +179,67 @@ function EditModal({ registration, isOpen, onClose, onSave }: EditModalProps) {
   );
 }
 
+function DeleteConfirmationDialog({ registration, isOpen, onClose, onConfirm, isDeleting }: DeleteConfirmationProps) {
+  if (!registration) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <AlertTriangle className="h-5 w-5" />
+            Confirm Deletion
+          </DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete this registration? This action cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div><strong>Name:</strong> {registration.full_name}</div>
+            <div><strong>RUT:</strong> {registration.rut}</div>
+            <div><strong>Email:</strong> {registration.university_email}</div>
+            <div><strong>Activity:</strong> {registration.activity_name}</div>
+            <div><strong>Year:</strong> {registration.year}</div>
+          </div>
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Warning</span>
+            </div>
+            <p className="text-sm text-red-600 mt-1">
+              This will permanently delete this registration record from the database.
+            </p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isDeleting}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isDeleting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Registration
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function DatabasePage() {
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -180,6 +249,9 @@ export default function DatabasePage() {
   const [totalPages, setTotalPages] = useState(1);
   const [editingRegistration, setEditingRegistration] = useState<RegistrationRecord | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deletingRegistration, setDeletingRegistration] = useState<RegistrationRecord | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [filters, setFilters] = useState<DatabaseFilters>({
     audience: 'all',
@@ -211,7 +283,8 @@ export default function DatabasePage() {
 
       if (filters.search) params.q = filters.search;
       if (filters.year && filters.year !== 'all') params.year = parseInt(filters.year);
-      if (filters.audience && filters.audience !== 'all') params.strategic_line = filters.audience;
+      if (filters.audience && filters.audience !== 'all') params.audience = filters.audience;
+      if (filters.activity && filters.activity !== 'all') params.activity_id = parseInt(filters.activity);
 
       const response = await axios.get<PaginatedResponse<RegistrationRecord>>('/api/database/', {
         params
@@ -277,6 +350,41 @@ export default function DatabasePage() {
           : reg
       )
     );
+  };
+
+  const handleDelete = (registration: RegistrationRecord) => {
+    setDeletingRegistration(registration);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingRegistration) return;
+
+    setIsDeleting(true);
+    try {
+      await axios.delete(`/api/database/registrations/${deletingRegistration.registration_id}`);
+
+      // Remove the deleted registration from the local state
+      setRegistrations(prev =>
+        prev.filter(reg => reg.registration_id !== deletingRegistration.registration_id)
+      );
+
+      // Update total count
+      setTotalItems(prev => prev - 1);
+
+      // Close the modal
+      setIsDeleteModalOpen(false);
+      setDeletingRegistration(null);
+
+      // Show success message (you could use a toast library here)
+      alert('Registration deleted successfully');
+
+    } catch (error) {
+      console.error('Error deleting registration:', error);
+      alert('Error deleting registration. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleExport = async (format: 'csv' | 'xlsx') => {
@@ -519,13 +627,25 @@ export default function DatabasePage() {
                       </TableCell>
                       <TableCell>{registration.source}</TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(registration)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(registration)}
+                            title="Edit registration"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(registration)}
+                            title="Delete registration"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -583,6 +703,17 @@ export default function DatabasePage() {
             setEditingRegistration(null);
           }}
           onSave={handleSaveEdit}
+        />
+
+        <DeleteConfirmationDialog
+          registration={deletingRegistration}
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setDeletingRegistration(null);
+          }}
+          onConfirm={confirmDelete}
+          isDeleting={isDeleting}
         />
       </div>
     </div>

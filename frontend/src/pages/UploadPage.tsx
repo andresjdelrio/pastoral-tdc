@@ -365,6 +365,49 @@ export default function UploadPage() {
               )}
             </div>
 
+            {uploadResult.duplicate_detection && uploadResult.duplicate_detection.total_added_to_queue > 0 && (
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2 text-orange-900 flex items-center">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Posibles Duplicados Detectados
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  {uploadResult.duplicate_detection.within_upload > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-orange-700">
+                        <strong>{uploadResult.duplicate_detection.within_upload}</strong> duplicados en la carga
+                      </span>
+                    </div>
+                  )}
+                  {uploadResult.duplicate_detection.against_existing > 0 && (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-orange-700">
+                        <strong>{uploadResult.duplicate_detection.against_existing}</strong> duplicados con registros existentes
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-orange-700">
+                      <strong>{uploadResult.duplicate_detection.total_added_to_queue}</strong> casos para revisar
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="text-sm text-orange-700">
+                    Método de detección: {uploadResult.duplicate_detection.method_used === 'hybrid' ? 'Embebidos + Texto' : 'Solo Texto'}
+                  </div>
+                  <Button
+                    onClick={() => window.open('/duplicate-review', '_blank')}
+                    variant="outline"
+                    size="sm"
+                    className="border-orange-200 text-orange-700 hover:bg-orange-100"
+                  >
+                    Revisar Duplicados
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="font-medium mb-2">Información del evento:</h4>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">

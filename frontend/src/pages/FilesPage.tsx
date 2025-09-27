@@ -91,7 +91,7 @@ export default function FilesPage() {
       if (yearFilter && yearFilter !== '__all__') params.append('year', yearFilter);
       if (audienceFilter && audienceFilter !== '__all__') params.append('audience', audienceFilter);
 
-      const response = await axios.get<FileListResponse>(`/api/files?${params}`);
+      const response = await axios.get<FileListResponse>(`/api/files/?${params}`);
       setFiles(response.data.files);
       setTotalPages(response.data.pages);
     } catch (err: any) {

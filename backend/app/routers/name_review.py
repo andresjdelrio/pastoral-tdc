@@ -17,6 +17,7 @@ from datetime import datetime
 from app.database import get_db
 from app.services.duplicate_detection import DuplicateDetectionService
 import logging
+import unidecode
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +29,23 @@ class DuplicateDetectionRequest(BaseModel):
     year: Optional[int] = None
     limit: Optional[int] = 1000
 
+class UploadDuplicateRequest(BaseModel):
+    registrant_ids: List[int]
+    activity_id: int
+    audience: str
+
 class ReviewDecisionRequest(BaseModel):
     decision: str  # 'accept', 'reject', 'skip'
     decided_by: str
     canonical_name: Optional[str] = None
+
+class RegistrantUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    rut: Optional[str] = None
+    university_email: Optional[str] = None
+    career: Optional[str] = None
+    phone: Optional[str] = None
+    audience: Optional[str] = None
 
 class ReviewItemResponse(BaseModel):
     id: int
@@ -95,6 +109,54 @@ async def detect_duplicates(
         }
     except Exception as e:
         logger.error(f"Error in duplicate detection endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/names/process-upload-duplicates")
+async def process_upload_duplicates(
+    request: UploadDuplicateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Process a specific upload to detect duplicates using enhanced embedding-based detection.
+    """
+    try:
+        from app.models import Registrant
+
+        # Validate audience
+        if request.audience not in ['estudiantes', 'colaboradores']:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid audience. Must be 'estudiantes' or 'colaboradores'"
+            )
+
+        # Get the registrants
+        registrants = db.query(Registrant).filter(
+            Registrant.id.in_(request.registrant_ids)
+        ).all()
+
+        if len(registrants) != len(request.registrant_ids):
+            raise HTTPException(
+                status_code=400,
+                detail="Some registrant IDs not found"
+            )
+
+        service = DuplicateDetectionService(db)
+        result = service.process_upload_for_duplicates(
+            new_registrants=registrants,
+            activity_id=request.activity_id,
+            audience=request.audience
+        )
+
+        return {
+            "success": True,
+            "message": f"Processed {len(registrants)} registrants for duplicates",
+            "details": result
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in upload duplicate processing endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/names/review", response_model=ReviewQueueResponse)
@@ -314,5 +376,108 @@ async def clear_review_queue(
         raise
     except Exception as e:
         logger.error(f"Error clearing review queue: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/names/detect-rut-duplicates")
+async def detect_rut_based_duplicates(db: Session = Depends(get_db)):
+    """
+    Detect duplicate registrants based on same RUT but different names across activities.
+
+    This endpoint specifically finds people who registered with slight name variations
+    across different activities, which would cause double-counting in indicators.
+    """
+    try:
+        service = DuplicateDetectionService(db)
+        result = service.find_rut_based_duplicates()
+
+        return {
+            "success": True,
+            "message": f"Found {result['candidates_found']} RUT-based duplicates, added {result['queue_added']} to review queue",
+            "details": result
+        }
+
+    except Exception as e:
+        logger.error(f"Error in RUT-based duplicate detection: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/names/registrant/{registrant_id}")
+async def update_registrant(
+    registrant_id: int,
+    request: RegistrantUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Update registrant information for duplicate resolution.
+    """
+    try:
+        from app.models import Registrant
+        from app.services.duplicate_detection import DuplicateDetectionService
+
+        # Get the registrant
+        registrant = db.query(Registrant).filter(Registrant.id == registrant_id).first()
+        if not registrant:
+            raise HTTPException(status_code=404, detail="Registrant not found")
+
+        # Track what fields are being updated for normalization
+        updated_fields = []
+
+        # Update provided fields
+        if request.full_name is not None:
+            registrant.full_name = request.full_name
+            updated_fields.append('full_name')
+
+        if request.rut is not None:
+            registrant.rut = request.rut
+            updated_fields.append('rut')
+
+        if request.university_email is not None:
+            registrant.university_email = request.university_email
+            updated_fields.append('university_email')
+
+        if request.career is not None:
+            registrant.career = request.career
+            updated_fields.append('career')
+
+        if request.phone is not None:
+            registrant.phone = request.phone
+            updated_fields.append('phone')
+
+        if request.audience is not None:
+            registrant.audience = request.audience
+            updated_fields.append('audience')
+
+        # If name was updated, regenerate normalized fields
+        if 'full_name' in updated_fields:
+            # Simple normalization - remove accents and convert to lowercase
+            import unidecode
+            normalized = unidecode.unidecode(registrant.full_name).lower().strip()
+            registrant.normalized_full_name = normalized
+            registrant.canonical_full_name = normalized.title()
+
+        registrant.updated_at = datetime.utcnow()
+        db.commit()
+
+        return {
+            "success": True,
+            "message": f"Registrant {registrant_id} updated successfully",
+            "updated_fields": updated_fields,
+            "registrant": {
+                "id": registrant.id,
+                "full_name": registrant.full_name,
+                "normalized_full_name": registrant.normalized_full_name,
+                "canonical_full_name": registrant.canonical_full_name,
+                "rut": registrant.rut,
+                "university_email": registrant.university_email,
+                "career": registrant.career,
+                "phone": registrant.phone,
+                "audience": registrant.audience
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating registrant {registrant_id}: {e}")
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))

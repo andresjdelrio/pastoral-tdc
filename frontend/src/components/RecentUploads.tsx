@@ -36,7 +36,7 @@ export function RecentUploads() {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get<FileListResponse>('/api/files?per_page=5');
+      const response = await axios.get<FileListResponse>('/api/files/?per_page=5');
       setRecentFiles(response.data.files);
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Error loading recent files');

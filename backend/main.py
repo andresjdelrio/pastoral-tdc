@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 from app.database import engine
 from app.models import Base
-from app.routers import registrations, admin, ingest, meta, indicators, activities, catalog, data_quality, files, database, name_review
+from app.routers import registrations, admin, ingest, meta, indicators, activities, catalog, data_quality, files, database, name_review, chat_analysis
 
 app = FastAPI(
     title="Event Registration Management Platform",
@@ -37,6 +37,7 @@ app.include_router(data_quality.router, prefix="/api", tags=["data-quality"])
 app.include_router(files.router, prefix="/api", tags=["files"])
 app.include_router(database.router, prefix="/api", tags=["database"])
 app.include_router(name_review.router, prefix="/api", tags=["name-review"])
+app.include_router(chat_analysis.router, prefix="/api", tags=["chat-analysis"])
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

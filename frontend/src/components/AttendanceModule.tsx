@@ -117,7 +117,7 @@ export default function AttendanceModule() {
       if (filters.year && filters.year !== 'all') params.year = filters.year;
       if (filters.strategicLine && filters.strategicLine !== 'all') params.strategic_line = filters.strategicLine;
 
-      const response = await axios.get('/api/activities', { params });
+      const response = await axios.get('/api/activities/', { params });
       setActivities(response.data.items);
     } catch (error: any) {
       setError('Error loading activities');

@@ -15,6 +15,17 @@ router = APIRouter(prefix="/indicators", tags=["indicators"])
 async def debug_endpoint():
     return {"message": "Debug endpoint working - changes applied", "timestamp": "2025-09-17T16:26:30"}
 
+@router.post("/invalidate-cache")
+async def invalidate_indicators_cache():
+    """
+    Invalidate the indicators cache to force a fresh calculation.
+    Useful after data structure changes.
+    """
+    cache_key = CacheKeyBuilder.indicators()
+    cache_service.delete(cache_key)
+    logger.info("Indicators cache invalidated manually")
+    return {"message": "Indicators cache invalidated successfully"}
+
 def classify_audience(career: str, raw_career: str = None) -> str:
     """
     Classify registrant as 'estudiantes' or 'colaboradores' based on career field.
@@ -87,6 +98,7 @@ async def get_indicators(db: Session = Depends(get_db)):
             reg.id as registration_id,
             r.id as registrant_id,
             r.full_name,
+            r.rut,
             reg.attended,
             COALESCE(r.audience, 'estudiantes') as audience
         FROM registrations reg
@@ -109,8 +121,10 @@ async def get_indicators(db: Session = Depends(get_db)):
                 ELSE 0
             END, 2
         ) as tasa,
-        COUNT(DISTINCT registrant_id) as personas
+        COUNT(DISTINCT rut) as personas_inscritas,
+        COUNT(DISTINCT CASE WHEN attended = 1 THEN rut END) as personas_participantes
     FROM audience_data
+    WHERE rut IS NOT NULL AND rut != ''
     GROUP BY year, audience
     ORDER BY year, audience
     """
@@ -132,8 +146,10 @@ async def get_indicators(db: Session = Depends(get_db)):
                 ELSE 0
             END, 2
         ) as tasa,
-        COUNT(DISTINCT registrant_id) as personas
+        COUNT(DISTINCT rut) as personas_inscritas,
+        COUNT(DISTINCT CASE WHEN attended = 1 THEN rut END) as personas_participantes
     FROM audience_data
+    WHERE rut IS NOT NULL AND rut != ''
     GROUP BY strategic_line, year, audience
     ORDER BY strategic_line, year, audience
     """
@@ -154,8 +170,10 @@ async def get_indicators(db: Session = Depends(get_db)):
                 ELSE 0
             END, 2
         ) as tasa,
-        COUNT(DISTINCT registrant_id) as personas
+        COUNT(DISTINCT rut) as personas_inscritas,
+        COUNT(DISTINCT CASE WHEN attended = 1 THEN rut END) as personas_participantes
     FROM audience_data
+    WHERE rut IS NOT NULL AND rut != ''
     GROUP BY strategic_line, audience
     ORDER BY strategic_line, audience
     """
@@ -165,7 +183,7 @@ async def get_indicators(db: Session = Depends(get_db)):
     # Process results into structured format
 
     # Helper function to calculate totals from estudiantes + colaboradores
-    def calculate_total_metrics(estudiantes_data, colaboradores_data, distinct_personas_count):
+    def calculate_total_metrics(estudiantes_data, colaboradores_data, distinct_personas_inscritas, distinct_personas_participantes):
         """Calculate total metrics from estudiantes and colaboradores data"""
         total_inscripciones = estudiantes_data['inscripciones'] + colaboradores_data['inscripciones']
         total_participaciones = estudiantes_data['participaciones'] + colaboradores_data['participaciones']
@@ -175,7 +193,8 @@ async def get_indicators(db: Session = Depends(get_db)):
             'inscripciones': total_inscripciones,
             'participaciones': total_participaciones,
             'tasa': total_tasa,
-            'personas': distinct_personas_count
+            'personas_inscritas': distinct_personas_inscritas,
+            'personas_participantes': distinct_personas_participantes
         }
 
     # Process yearly data
@@ -193,26 +212,36 @@ async def get_indicators(db: Session = Depends(get_db)):
 
         if year not in yearly_by_year:
             yearly_by_year[year] = {
-                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0},
-                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0}
+                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0},
+                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0}
             }
 
         yearly_by_year[year][audience] = {
             'inscripciones': row.inscripciones,
             'participaciones': row.participaciones,
             'tasa': row.tasa,
-            'personas': row.personas
+            'personas_inscritas': row.personas_inscritas,
+            'personas_participantes': row.personas_participantes
         }
 
-    # Calculate distinct personas per year for totals
+    # Calculate distinct personas per year for totals (using RUT for accurate distinct counting)
     distinct_personas_query = base_query + """
-    SELECT year, COUNT(DISTINCT full_name) as total_personas
+    SELECT
+        year,
+        COUNT(DISTINCT rut) as total_personas_inscritas,
+        COUNT(DISTINCT CASE WHEN attended = 1 THEN rut END) as total_personas_participantes
     FROM audience_data
+    WHERE rut IS NOT NULL AND rut != ''
     GROUP BY year
     ORDER BY year
     """
     distinct_personas_results = db.execute(text(distinct_personas_query)).fetchall()
-    distinct_personas_by_year = {row.year: row.total_personas for row in distinct_personas_results}
+    distinct_personas_by_year = {
+        row.year: {
+            'inscritas': row.total_personas_inscritas,
+            'participantes': row.total_personas_participantes
+        } for row in distinct_personas_results
+    }
 
     # Build yearly data with calculated totals
     for year, data in yearly_by_year.items():
@@ -227,10 +256,12 @@ async def get_indicators(db: Session = Depends(get_db)):
         })
 
         # Calculate and add total data
+        year_personas = distinct_personas_by_year.get(year, {'inscritas': 0, 'participantes': 0})
         total_data = calculate_total_metrics(
             data['estudiantes'],
             data['colaboradores'],
-            distinct_personas_by_year.get(year, 0)
+            year_personas['inscritas'],
+            year_personas['participantes']
         )
         yearly_data['total'].append({
             'year': year,
@@ -240,11 +271,15 @@ async def get_indicators(db: Session = Depends(get_db)):
     # Process people data (calculate from existing yearly data)
     people_data = []
     for year, data in yearly_by_year.items():
+        year_personas = distinct_personas_by_year.get(year, {'inscritas': 0, 'participantes': 0})
         people_data.append({
             'year': year,
-            'estudiantes': data['estudiantes']['personas'],
-            'colaboradores': data['colaboradores']['personas'],
-            'total': distinct_personas_by_year.get(year, 0)
+            'estudiantes_inscritas': data['estudiantes']['personas_inscritas'],
+            'estudiantes_participantes': data['estudiantes']['personas_participantes'],
+            'colaboradores_inscritas': data['colaboradores']['personas_inscritas'],
+            'colaboradores_participantes': data['colaboradores']['personas_participantes'],
+            'total_inscritas': year_personas['inscritas'],
+            'total_participantes': year_personas['participantes']
         })
 
     # Process strategic line data
@@ -259,9 +294,9 @@ async def get_indicators(db: Session = Depends(get_db)):
                 'colaboradores': []
             },
             'total': {
-                'total': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0},
-                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0},
-                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0}
+                'total': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0},
+                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0},
+                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0}
             }
         }
 
@@ -276,21 +311,27 @@ async def get_indicators(db: Session = Depends(get_db)):
             strategic_by_line_year[line] = {}
         if year not in strategic_by_line_year[line]:
             strategic_by_line_year[line][year] = {
-                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0},
-                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0}
+                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0},
+                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0}
             }
 
         strategic_by_line_year[line][year][audience] = {
             'inscripciones': row.inscripciones,
             'participaciones': row.participaciones,
             'tasa': row.tasa,
-            'personas': row.personas
+            'personas_inscritas': row.personas_inscritas,
+            'personas_participantes': row.personas_participantes
         }
 
-    # Calculate distinct personas for strategic line totals per year
+    # Calculate distinct personas for strategic line totals per year (using RUT for accuracy)
     strategic_personas_query = base_query + """
-    SELECT strategic_line, year, COUNT(DISTINCT full_name) as total_personas
+    SELECT
+        strategic_line,
+        year,
+        COUNT(DISTINCT rut) as total_personas_inscritas,
+        COUNT(DISTINCT CASE WHEN attended = 1 THEN rut END) as total_personas_participantes
     FROM audience_data
+    WHERE rut IS NOT NULL AND rut != ''
     GROUP BY strategic_line, year
     ORDER BY strategic_line, year
     """
@@ -299,7 +340,10 @@ async def get_indicators(db: Session = Depends(get_db)):
     for row in strategic_personas_results:
         if row.strategic_line not in strategic_personas_by_line_year:
             strategic_personas_by_line_year[row.strategic_line] = {}
-        strategic_personas_by_line_year[row.strategic_line][row.year] = row.total_personas
+        strategic_personas_by_line_year[row.strategic_line][row.year] = {
+            'inscritas': row.total_personas_inscritas,
+            'participantes': row.total_personas_participantes
+        }
 
     # Build strategic yearly data
     for line in strategic_lines:
@@ -316,10 +360,12 @@ async def get_indicators(db: Session = Depends(get_db)):
                 })
 
                 # Calculate and add total data
+                year_personas = strategic_personas_by_line_year.get(line, {}).get(year, {'inscritas': 0, 'participantes': 0})
                 total_data = calculate_total_metrics(
                     data['estudiantes'],
                     data['colaboradores'],
-                    strategic_personas_by_line_year.get(line, {}).get(year, 0)
+                    year_personas['inscritas'],
+                    year_personas['participantes']
                 )
                 strategic_data[line]['yearly']['total'].append({
                     'year': year,
@@ -334,25 +380,35 @@ async def get_indicators(db: Session = Depends(get_db)):
 
         if line not in strategic_totals_by_line:
             strategic_totals_by_line[line] = {
-                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0},
-                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas': 0}
+                'estudiantes': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0},
+                'colaboradores': {'inscripciones': 0, 'participaciones': 0, 'tasa': 0, 'personas_inscritas': 0, 'personas_participantes': 0}
             }
 
         strategic_totals_by_line[line][audience] = {
             'inscripciones': row.inscripciones,
             'participaciones': row.participaciones,
             'tasa': row.tasa,
-            'personas': row.personas
+            'personas_inscritas': row.personas_inscritas,
+            'personas_participantes': row.personas_participantes
         }
 
-    # Calculate strategic line total distinct personas
+    # Calculate strategic line total distinct personas (using RUT for accuracy)
     strategic_total_personas_query = base_query + """
-    SELECT strategic_line, COUNT(DISTINCT full_name) as total_personas
+    SELECT
+        strategic_line,
+        COUNT(DISTINCT rut) as total_personas_inscritas,
+        COUNT(DISTINCT CASE WHEN attended = 1 THEN rut END) as total_personas_participantes
     FROM audience_data
+    WHERE rut IS NOT NULL AND rut != ''
     GROUP BY strategic_line
     """
     strategic_total_personas_results = db.execute(text(strategic_total_personas_query)).fetchall()
-    strategic_total_personas = {row.strategic_line: row.total_personas for row in strategic_total_personas_results}
+    strategic_total_personas = {
+        row.strategic_line: {
+            'inscritas': row.total_personas_inscritas,
+            'participantes': row.total_personas_participantes
+        } for row in strategic_total_personas_results
+    }
 
     # Finalize strategic totals
     for line in strategic_lines:
@@ -364,10 +420,12 @@ async def get_indicators(db: Session = Depends(get_db)):
             strategic_data[line]['total']['colaboradores'] = data['colaboradores']
 
             # Calculate overall total
+            line_personas = strategic_total_personas.get(line, {'inscritas': 0, 'participantes': 0})
             total_data = calculate_total_metrics(
                 data['estudiantes'],
                 data['colaboradores'],
-                strategic_total_personas.get(line, 0)
+                line_personas['inscritas'],
+                line_personas['participantes']
             )
             strategic_data[line]['total']['total'] = total_data
 

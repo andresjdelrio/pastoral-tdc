@@ -69,7 +69,7 @@ export default function IndicatorsModule() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await axios.get('/api/indicators');
+      const response = await axios.get('/api/indicators/');
       setData(response.data);
     } catch (error: any) {
       setError(error.response?.data?.detail || 'Error loading indicators');
@@ -199,10 +199,11 @@ export default function IndicatorsModule() {
       (acc, row) => ({
         inscripciones: acc.inscripciones + row.inscripciones,
         participaciones: acc.participaciones + row.participaciones,
-        personas: acc.personas + row.personas,
+        personas_inscritas: acc.personas_inscritas + row.personas_inscritas,
+        personas_participantes: acc.personas_participantes + row.personas_participantes,
         tasa: 0 // Will calculate after
       }),
-      { inscripciones: 0, participaciones: 0, personas: 0, tasa: 0 }
+      { inscripciones: 0, participaciones: 0, personas_inscritas: 0, personas_participantes: 0, tasa: 0 }
     ) : null;
 
     if (totals) {
@@ -232,7 +233,10 @@ export default function IndicatorsModule() {
                     Participaciones
                   </TableHead>
                   <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
-                    Personas
+                    Personas Inscritas
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Personas Participantes
                   </TableHead>
                   <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
                     Tasa (%)
@@ -241,13 +245,22 @@ export default function IndicatorsModule() {
               ) : (
                 <>
                   <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
-                    Estudiantes
+                    Est. Inscritas
                   </TableHead>
                   <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
-                    Colaboradores
+                    Est. Participantes
                   </TableHead>
                   <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
-                    Total
+                    Col. Inscritas
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Col. Participantes
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Total Inscritas
+                  </TableHead>
+                  <TableHead scope="col" className="text-white font-bold px-4 py-3 text-right">
+                    Total Participantes
                   </TableHead>
                 </>
               )}
@@ -269,7 +282,10 @@ export default function IndicatorsModule() {
                         {(row as YearlyIndicators).participaciones.toLocaleString()}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-right">
-                        {(row as YearlyIndicators).personas.toLocaleString()}
+                        {(row as YearlyIndicators).personas_inscritas.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as YearlyIndicators).personas_participantes.toLocaleString()}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-right">
                         {(row as YearlyIndicators).tasa}%
@@ -278,13 +294,22 @@ export default function IndicatorsModule() {
                   ) : (
                     <>
                       <TableCell className="px-4 py-2 text-right">
-                        {(row as PeopleIndicators).estudiantes.toLocaleString()}
+                        {(row as PeopleIndicators).estudiantes_inscritas.toLocaleString()}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-right">
-                        {(row as PeopleIndicators).colaboradores.toLocaleString()}
+                        {(row as PeopleIndicators).estudiantes_participantes.toLocaleString()}
                       </TableCell>
                       <TableCell className="px-4 py-2 text-right">
-                        {(row as PeopleIndicators).total.toLocaleString()}
+                        {(row as PeopleIndicators).colaboradores_inscritas.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as PeopleIndicators).colaboradores_participantes.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as PeopleIndicators).total_inscritas.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        {(row as PeopleIndicators).total_participantes.toLocaleString()}
                       </TableCell>
                     </>
                   )}
@@ -292,7 +317,7 @@ export default function IndicatorsModule() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={isYearlyData ? 5 : 4} className="px-4 py-8 text-center text-gray-500">
+                <TableCell colSpan={isYearlyData ? 6 : 7} className="px-4 py-8 text-center text-gray-500">
                   No hay datos disponibles para esta línea estratégica
                 </TableCell>
               </TableRow>
@@ -309,7 +334,10 @@ export default function IndicatorsModule() {
                   {totals.participaciones.toLocaleString()}
                 </TableCell>
                 <TableCell className="px-4 py-2 text-right font-semibold">
-                  {totals.personas.toLocaleString()}
+                  {totals.personas_inscritas.toLocaleString()}
+                </TableCell>
+                <TableCell className="px-4 py-2 text-right font-semibold">
+                  {totals.personas_participantes.toLocaleString()}
                 </TableCell>
                 <TableCell className="px-4 py-2 text-right font-semibold">
                   {totals.tasa}%
@@ -336,7 +364,7 @@ export default function IndicatorsModule() {
   const IndicatorsChart = ({ data }: { data: YearlyIndicators[] }) => (
     <div className="bg-white rounded-2xl shadow-sm border p-6">
       <h3 className="text-[16px] font-semibold text-brand-text mb-4">
-        Inscripciones, Participaciones, Tasa Conversión y Personas
+        Inscripciones, Participaciones, Tasa Conversión, Personas Inscritas y Participantes
       </h3>
       <ResponsiveContainer width="100%" height={400}>
         <ComposedChart data={data} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
@@ -398,9 +426,16 @@ export default function IndicatorsModule() {
           />
           <Bar
             yAxisId="left"
-            dataKey="personas"
+            dataKey="personas_inscritas"
             fill="#BDBDBD"
-            name="Personas"
+            name="Personas Inscritas"
+            radius={[2, 2, 0, 0]}
+          />
+          <Bar
+            yAxisId="left"
+            dataKey="personas_participantes"
+            fill="#9E9E9E"
+            name="Personas Participantes"
             radius={[2, 2, 0, 0]}
           />
           <Line
@@ -603,7 +638,7 @@ export default function IndicatorsModule() {
         {/* Second section: People participants */}
         <div className="space-y-2">
           <h2 className="text-[16px] font-semibold text-brand-text">
-            Personas participantes por año
+            Personas por año (inscritas vs participantes)
           </h2>
           <BrandTable data={selectedYear === 'all' ? peopleData : peopleData.filter(item => item.year === selectedYear)} />
         </div>

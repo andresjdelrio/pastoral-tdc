@@ -73,3 +73,20 @@ jspm_packages/
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Additional Python entries
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# Temporary files
+*.tmp
+*.temp
+nul
+
+# Database journals
+*.db-journal
+
+# Static uploads
+static/uploads/
+uploads/

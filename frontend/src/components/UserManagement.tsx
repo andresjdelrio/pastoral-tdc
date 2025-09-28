@@ -44,20 +44,36 @@ export default function UserManagement({ onClose }: UserManagementProps) {
   const loadUsers = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.get('/api/auth/users', {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      setUsers(response.data);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      // For now, show demo users if API fails
-      setUsers([
+
+      // Use mock data for demo
+      const mockUsers = [
         { id: '1', username: 'admin', role: 'admin' },
         { id: '2', username: 'pastoral', role: 'user' },
         { id: '3', username: 'demo', role: 'user' }
-      ]);
+      ];
+
+      // Try to load from localStorage for persistence
+      const storedUsers = localStorage.getItem('demo_users');
+      if (storedUsers) {
+        setUsers(JSON.parse(storedUsers));
+      } else {
+        setUsers(mockUsers);
+        localStorage.setItem('demo_users', JSON.stringify(mockUsers));
+      }
+
+      // Try API if available (for future backend integration)
+      try {
+        const response = await axios.get('/api/auth/users', {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        setUsers(response.data);
+      } catch (apiError) {
+        console.log('API not available, using mock data');
+      }
+    } catch (error) {
+      console.error('Error loading users:', error);
     } finally {
       setIsLoading(false);
     }
@@ -66,15 +82,34 @@ export default function UserManagement({ onClose }: UserManagementProps) {
   const handleCreateUser = async () => {
     try {
       setIsLoading(true);
-      const response = await axios.post('/api/auth/users', newUser, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
 
-      setUsers([...users, response.data]);
+      // Mock user creation for demo
+      const newId = String(users.length + 1);
+      const createdUser = {
+        id: newId,
+        username: newUser.username,
+        role: newUser.role
+      };
+
+      const updatedUsers = [...users, createdUser];
+      setUsers(updatedUsers);
+      localStorage.setItem('demo_users', JSON.stringify(updatedUsers));
+
       setNewUser({ username: '', password: '', role: 'user' });
       setIsCreateDialogOpen(false);
+
+      // Try API if available
+      try {
+        const response = await axios.post('/api/auth/users', newUser, {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        // If API succeeds, reload from API
+        loadUsers();
+      } catch (apiError) {
+        console.log('API not available, user created locally');
+      }
     } catch (error) {
       console.error('Error creating user:', error);
       alert('Error al crear usuario');

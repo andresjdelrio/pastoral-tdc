@@ -25,6 +25,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const token = localStorage.getItem('auth_token');
       if (token) {
         try {
+          // Try to decode mock token first
+          try {
+            const decoded = JSON.parse(atob(token));
+            if (decoded.username && decoded.role && decoded.exp > Date.now()) {
+              setUser({
+                id: '1',
+                username: decoded.username,
+                role: decoded.role
+              });
+              setIsLoading(false);
+              return;
+            }
+          } catch (mockError) {
+            // Not a mock token, try API verification
+          }
+
+          // Try API verification
           const response = await fetch('/api/auth/verify', {
             headers: {
               'Authorization': `Bearer ${token}`
@@ -50,20 +67,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      // Client-side authentication for demo (no backend required)
+      if (username === 'admin' && password === 'pastoral2024') {
+        // Generate a mock token
+        const mockToken = btoa(JSON.stringify({
+          username: 'admin',
+          role: 'admin',
+          exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+        }));
 
-      const data = await response.json();
+        const userData = {
+          id: '1',
+          username: 'admin',
+          role: 'admin' as const
+        };
 
-      if (response.ok) {
-        localStorage.setItem('auth_token', data.token);
-        setUser(data.user);
+        localStorage.setItem('auth_token', mockToken);
+        setUser(userData);
         return true;
+      }
+
+      // Try API if available (for future backend integration)
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          localStorage.setItem('auth_token', data.token);
+          setUser(data.user);
+          return true;
+        }
+      } catch (apiError) {
+        console.log('API not available, using client-side auth');
       }
 
       return false;

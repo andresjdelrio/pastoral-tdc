@@ -93,27 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Credentials do not match admin/pastoral2024');
 
-      // Try API if available (for future backend integration)
-      try {
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ username, password }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          localStorage.setItem('auth_token', data.token);
-          setUser(data.user);
-          return true;
-        }
-      } catch (apiError) {
-        console.log('API not available, using client-side auth');
-      }
-
       return false;
     } catch (error) {
       console.error('Login failed:', error);

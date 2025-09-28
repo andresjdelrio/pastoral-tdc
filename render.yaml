@@ -24,7 +24,6 @@ services:
   - type: web
     name: pastoral-frontend
     env: static
-    region: oregon
     plan: free
     buildCommand: "cd frontend && npm install && npm run build:prod"
     staticPublishPath: frontend/dist

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import {
   Home,
@@ -9,11 +10,12 @@ import {
   TrendingUp,
   UserCheck,
   FolderOpen,
-  UserX
+  LogOut
 } from 'lucide-react';
 
 export function Navigation() {
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home },
@@ -58,6 +60,21 @@ export function Navigation() {
                   </Link>
                 );
               })}
+            </div>
+
+            {/* User info and logout */}
+            <div className="flex items-center space-x-3 border-l border-gray-200 pl-4">
+              <span className="text-sm text-gray-600">
+                {user?.username}
+              </span>
+              <button
+                onClick={logout}
+                className="flex items-center space-x-1 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                title="Cerrar sesión"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Salir</span>
+              </button>
             </div>
           </div>
         </div>

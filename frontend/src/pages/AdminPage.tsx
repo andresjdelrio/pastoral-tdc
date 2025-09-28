@@ -3,11 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import CatalogManagement from '@/components/CatalogManagement';
 import DataQualityModule from '@/components/DataQualityModule';
-import { BookOpen, Settings, Upload, AlertTriangle, Database, FileX } from 'lucide-react';
+import UserManagement from '@/components/UserManagement';
+import { BookOpen, Settings, Upload, AlertTriangle, Database, FileX, Users } from 'lucide-react';
 
 export default function AdminPage() {
   const [showCatalogManagement, setShowCatalogManagement] = useState(false);
   const [showDataQuality, setShowDataQuality] = useState(false);
+  const [showUserManagement, setShowUserManagement] = useState(false);
 
   if (showCatalogManagement) {
     return <CatalogManagement onClose={() => setShowCatalogManagement(false)} />;
@@ -15,6 +17,10 @@ export default function AdminPage() {
 
   if (showDataQuality) {
     return <DataQualityModule />;
+  }
+
+  if (showUserManagement) {
+    return <UserManagement onClose={() => setShowUserManagement(false)} />;
   }
 
   return (
@@ -40,6 +46,23 @@ export default function AdminPage() {
           <CardContent>
             <Button onClick={() => setShowCatalogManagement(true)} className="w-full">
               Abrir Gestión de Catálogos
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Users className="h-5 w-5" />
+              <span>User Management</span>
+            </CardTitle>
+            <CardDescription>
+              Manage system users, roles, and permissions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => setShowUserManagement(true)} className="w-full">
+              Gestionar Usuarios
             </Button>
           </CardContent>
         </Card>

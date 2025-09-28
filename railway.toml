@@ -1,0 +1,27 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+
+[[services]]
+name = "backend"
+source = "./backend"
+
+[services.healthcheck]
+path = "/health"
+timeout = 100
+
+[services.variables]
+PORT = "8000"
+DATABASE_URL = "${{Postgres.DATABASE_URL}}"
+JWT_SECRET_KEY = "${{JWT_SECRET_KEY}}"
+
+[[services]]
+name = "frontend"
+source = "./frontend"
+
+[services.variables]
+VITE_API_URL = "${{backend.RAILWAY_PUBLIC_DOMAIN}}"

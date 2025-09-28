@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       console.log('Login attempt:', { username, password });
+      console.log('Using client-side authentication only');
 
       // Client-side authentication for demo (no backend required)
       if (username === 'admin' && password === 'pastoral2024') {

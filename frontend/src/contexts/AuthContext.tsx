@@ -70,31 +70,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Login attempt:', { username, password });
       console.log('Using client-side authentication only');
 
-      // Client-side authentication for demo (no backend required)
-      if (username === 'admin' && password === 'pastoral2024') {
-        console.log('Client-side auth successful');
-        // Generate a mock token
-        const mockToken = btoa(JSON.stringify({
-          username: 'admin',
-          role: 'admin',
-          exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-        }));
+      // Get stored users from localStorage
+      const storedUsers = localStorage.getItem('demo_users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
 
-        const userData = {
+      // Add default admin if not exists
+      const adminExists = users.find((u: any) => u.username === 'admin');
+      if (!adminExists) {
+        users.push({
           id: '1',
           username: 'admin',
-          role: 'admin' as const
-        };
-
-        localStorage.setItem('auth_token', mockToken);
-        setUser(userData);
-        console.log('User set:', userData);
-        return true;
+          password: 'pastoral2024',
+          role: 'admin'
+        });
       }
 
-      console.log('Credentials do not match admin/pastoral2024');
+      // Find user by username
+      const user = users.find((u: any) => u.username === username);
+      if (!user) {
+        console.log('User not found:', username);
+        return false;
+      }
 
-      return false;
+      // Check password (for demo, passwords are stored in plain text in localStorage)
+      const storedPassword = user.password || 'pastoral2024'; // Default for admin
+      if (password !== storedPassword) {
+        console.log('Password mismatch');
+        return false;
+      }
+
+      console.log('Client-side auth successful for user:', username);
+
+      // Generate a mock token
+      const mockToken = btoa(JSON.stringify({
+        username: user.username,
+        role: user.role,
+        exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      }));
+
+      const userData = {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      };
+
+      localStorage.setItem('auth_token', mockToken);
+      setUser(userData);
+      console.log('User set:', userData);
+      return true;
     } catch (error) {
       console.error('Login failed:', error);
       return false;

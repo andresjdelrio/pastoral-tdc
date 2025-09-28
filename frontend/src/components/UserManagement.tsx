@@ -88,12 +88,13 @@ export default function UserManagement({ onClose }: UserManagementProps) {
       const createdUser = {
         id: newId,
         username: newUser.username,
+        password: newUser.password, // Store password for login
         role: newUser.role
       };
 
       const updatedUsers = [...users, createdUser];
-      setUsers(updatedUsers);
-      localStorage.setItem('demo_users', JSON.stringify(updatedUsers));
+      setUsers(updatedUsers.map(u => ({ id: u.id, username: u.username, role: u.role }))); // Display without password
+      localStorage.setItem('demo_users', JSON.stringify(updatedUsers)); // Store with password
 
       setNewUser({ username: '', password: '', role: 'user' });
       setIsCreateDialogOpen(false);
@@ -162,13 +163,20 @@ export default function UserManagement({ onClose }: UserManagementProps) {
 
     try {
       setIsLoading(true);
-      await axios.delete(`/api/auth/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
 
-      setUsers(users.filter(user => user.id !== userId));
+      // Get full user data from localStorage
+      const storedUsers = localStorage.getItem('demo_users');
+      const allUsers = storedUsers ? JSON.parse(storedUsers) : [];
+
+      // Remove user from both stored data and display data
+      const updatedStoredUsers = allUsers.filter((user: any) => user.id !== userId);
+      const updatedDisplayUsers = users.filter(user => user.id !== userId);
+
+      // Update both localStorage and display
+      localStorage.setItem('demo_users', JSON.stringify(updatedStoredUsers));
+      setUsers(updatedDisplayUsers);
+
+      console.log('User deleted successfully');
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('Error al eliminar usuario');

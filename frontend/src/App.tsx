@@ -7,7 +7,6 @@ import AttendancePage from '@/pages/AttendancePage';
 import DatabasePage from '@/pages/DatabasePage';
 import AdminPage from '@/pages/AdminPage';
 import FilesPage from '@/pages/FilesPage';
-import DuplicateReviewPage from '@/pages/DuplicateReviewPage';
 import './styles/globals.css';
 
 function App() {
@@ -24,7 +23,6 @@ function App() {
             <Route path="/database" element={<DatabasePage />} />
             <Route path="/files" element={<FilesPage />} />
             <Route path="/admin" element={<AdminPage />} />
-            <Route path="/duplicate-review" element={<DuplicateReviewPage />} />
           </Routes>
         </main>
       </div>

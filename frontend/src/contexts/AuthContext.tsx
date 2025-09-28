@@ -67,8 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
+      console.log('Login attempt:', { username, password });
+
       // Client-side authentication for demo (no backend required)
       if (username === 'admin' && password === 'pastoral2024') {
+        console.log('Client-side auth successful');
         // Generate a mock token
         const mockToken = btoa(JSON.stringify({
           username: 'admin',
@@ -84,8 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         localStorage.setItem('auth_token', mockToken);
         setUser(userData);
+        console.log('User set:', userData);
         return true;
       }
+
+      console.log('Credentials do not match admin/pastoral2024');
 
       // Try API if available (for future backend integration)
       try {

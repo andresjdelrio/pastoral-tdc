@@ -45,6 +45,22 @@ class UpdateRegistrantRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=20)
     audience: Optional[str] = Field(None, max_length=20, description="Audience classification: estudiantes or colaboradores")
 
+class CreateRegistrationRequest(BaseModel):
+    # Registrant data
+    full_name: str = Field(..., min_length=1, max_length=200)
+    rut: Optional[str] = Field(None, max_length=20)
+    university_email: Optional[str] = Field(None, max_length=200)
+    career: str = Field(..., min_length=1, max_length=200)
+    phone: Optional[str] = Field(None, max_length=20)
+    audience: str = Field(..., description="Audience classification: estudiantes or colaboradores")
+
+    # Activity data
+    activity_id: int = Field(..., description="ID of the activity to register for")
+
+    # Registration data
+    participation_status: str = Field(default="registered", description="Participation status: registered, attended, no_show")
+    source: str = Field(default="manual", description="Source of registration")
+
 class PaginatedResponse(BaseModel):
     items: List[RegistrationRecord]
     total: int
@@ -183,6 +199,107 @@ async def get_database_records(
         per_page=per_page,
         pages=pages
     )
+
+@router.post("/registrations")
+async def create_registration(
+    registration_data: CreateRegistrationRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new registration with registrant data.
+    """
+    try:
+        # Check if activity exists
+        activity = db.query(Activity).filter(Activity.id == registration_data.activity_id).first()
+        if not activity:
+            raise HTTPException(status_code=404, detail="Activity not found")
+
+        # Check if registrant with same RUT already exists (if RUT provided)
+        existing_registrant = None
+        if registration_data.rut and registration_data.rut.strip():
+            existing_registrant = db.query(Registrant).filter(
+                Registrant.rut == registration_data.rut.strip()
+            ).first()
+
+        # Create or use existing registrant
+        if existing_registrant:
+            registrant = existing_registrant
+            # Update registrant data if needed
+            registrant.full_name = registration_data.full_name
+            registrant.university_email = registration_data.university_email
+            registrant.career = registration_data.career
+            registrant.phone = registration_data.phone
+            registrant.audience = registration_data.audience
+        else:
+            # Create new registrant
+            registrant = Registrant(
+                full_name=registration_data.full_name,
+                rut=registration_data.rut.strip() if registration_data.rut else None,
+                university_email=registration_data.university_email,
+                career=registration_data.career,
+                phone=registration_data.phone,
+                audience=registration_data.audience
+            )
+            db.add(registrant)
+            db.flush()  # Get the ID
+
+        # Check if registration already exists for this registrant and activity
+        existing_registration = db.query(Registration).filter(
+            Registration.registrant_id == registrant.id,
+            Registration.activity_id == registration_data.activity_id
+        ).first()
+
+        if existing_registration:
+            raise HTTPException(
+                status_code=400,
+                detail="Registration already exists for this person and activity"
+            )
+
+        # Create new registration
+        registration = Registration(
+            registrant_id=registrant.id,
+            activity_id=registration_data.activity_id,
+            participation_status=registration_data.participation_status,
+            source=registration_data.source,
+            attended=registration_data.participation_status == "attended",
+            registered_at=datetime.utcnow()
+        )
+
+        db.add(registration)
+        db.commit()
+        db.refresh(registration)
+
+        # Invalidate cache since data changed
+        invalidate_on_data_change()
+
+        # Return created registration with full details
+        return {
+            "success": True,
+            "message": "Registration created successfully",
+            "registration": {
+                "registration_id": registration.id,
+                "registrant_id": registrant.id,
+                "full_name": registrant.full_name,
+                "rut": registrant.rut,
+                "university_email": registrant.university_email,
+                "career": registrant.career,
+                "phone": registrant.phone,
+                "activity_name": activity.activity,
+                "strategic_line": activity.strategic_line,
+                "year": activity.year,
+                "audience": registrant.audience,
+                "participation_status": registration.participation_status,
+                "source": registration.source,
+                "registered_at": registration.registered_at.isoformat()
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating registration: {e}")
+        raise HTTPException(status_code=500, detail=f"Error creating registration: {str(e)}")
 
 @router.put("/registrants/{registrant_id}")
 async def update_registrant(

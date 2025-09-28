@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Download, Edit, Search, Filter, ChevronLeft, ChevronRight, Database, Users, Trash2, AlertTriangle } from 'lucide-react';
+import { Download, Edit, Search, Filter, ChevronLeft, ChevronRight, Database, Users, Trash2, AlertTriangle, UserX, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import axios from 'axios';
+import DuplicateReviewPage from './DuplicateReviewPage';
 
 interface DatabaseFilters {
   audience: string;
@@ -48,6 +49,18 @@ interface PaginatedResponse<T> {
   page: number;
   per_page: number;
   pages: number;
+}
+
+interface NewRegistrationData {
+  full_name: string;
+  rut: string;
+  university_email: string;
+  career: string;
+  phone: string;
+  audience: string;
+  activity_id: number;
+  participation_status: string;
+  source: string;
 }
 
 interface EditModalProps {
@@ -240,6 +253,242 @@ function DeleteConfirmationDialog({ registration, isOpen, onClose, onConfirm, is
   );
 }
 
+interface AddNewRegistrationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: NewRegistrationData) => Promise<void>;
+  activities: Activity[];
+  isAdding: boolean;
+}
+
+function AddNewRegistrationModal({ isOpen, onClose, onSave, activities, isAdding }: AddNewRegistrationModalProps) {
+  const [formData, setFormData] = useState<NewRegistrationData>({
+    full_name: '',
+    rut: '',
+    university_email: '',
+    career: '',
+    phone: '',
+    audience: 'estudiantes',
+    activity_id: 0,
+    participation_status: 'registered',
+    source: 'manual'
+  });
+
+  const [errors, setErrors] = useState<Partial<NewRegistrationData>>({});
+
+  const handleInputChange = (field: keyof NewRegistrationData, value: string | number) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: Partial<NewRegistrationData> = {};
+
+    if (!formData.full_name.trim()) newErrors.full_name = 'Full name is required';
+    if (!formData.career.trim()) newErrors.career = 'Career is required';
+    if (!formData.audience) newErrors.audience = 'Audience is required';
+    if (!formData.activity_id || formData.activity_id === 0) newErrors.activity_id = 0;
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    try {
+      await onSave(formData);
+      // Reset form
+      setFormData({
+        full_name: '',
+        rut: '',
+        university_email: '',
+        career: '',
+        phone: '',
+        audience: 'estudiantes',
+        activity_id: 0,
+        participation_status: 'registered',
+        source: 'manual'
+      });
+      setErrors({});
+      onClose();
+    } catch (error) {
+      console.error('Error creating registration:', error);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Registration</DialogTitle>
+          <DialogDescription>
+            Create a new registration entry with complete registrant information.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          {/* Personal Information */}
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm text-gray-700">Personal Information</h4>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name *</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => handleInputChange('full_name', e.target.value)}
+                  placeholder="Enter full name"
+                  className={errors.full_name ? 'border-red-500' : ''}
+                />
+                {errors.full_name && <span className="text-red-500 text-xs">{errors.full_name}</span>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rut">RUT</Label>
+                <Input
+                  id="rut"
+                  value={formData.rut}
+                  onChange={(e) => handleInputChange('rut', e.target.value)}
+                  placeholder="12345678-9"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="university_email">University Email</Label>
+                <Input
+                  id="university_email"
+                  type="email"
+                  value={formData.university_email}
+                  onChange={(e) => handleInputChange('university_email', e.target.value)}
+                  placeholder="student@uft.cl"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  placeholder="+56 9 1234 5678"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="career">Career *</Label>
+                <Input
+                  id="career"
+                  value={formData.career}
+                  onChange={(e) => handleInputChange('career', e.target.value)}
+                  placeholder="Enter career or area"
+                  className={errors.career ? 'border-red-500' : ''}
+                />
+                {errors.career && <span className="text-red-500 text-xs">{errors.career}</span>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="audience">Audience *</Label>
+                <Select value={formData.audience} onValueChange={(value) => handleInputChange('audience', value)}>
+                  <SelectTrigger className={errors.audience ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Select audience" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="estudiantes">Estudiantes</SelectItem>
+                    <SelectItem value="colaboradores">Colaboradores</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.audience && <span className="text-red-500 text-xs">{errors.audience}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Activity Information */}
+          <div className="space-y-4">
+            <h4 className="font-medium text-sm text-gray-700">Activity Information</h4>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="activity_id">Activity *</Label>
+                <Select
+                  value={formData.activity_id.toString()}
+                  onValueChange={(value) => handleInputChange('activity_id', parseInt(value))}
+                >
+                  <SelectTrigger className={errors.activity_id !== undefined ? 'border-red-500' : ''}>
+                    <SelectValue placeholder="Select activity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activities.map((activity) => (
+                      <SelectItem key={activity.id} value={activity.id.toString()}>
+                        {activity.name} ({activity.strategic_line}, {activity.year})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.activity_id !== undefined && <span className="text-red-500 text-xs">Activity is required</span>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="participation_status">Participation Status</Label>
+                <Select
+                  value={formData.participation_status}
+                  onValueChange={(value) => handleInputChange('participation_status', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="registered">Registered</SelectItem>
+                    <SelectItem value="attended">Attended</SelectItem>
+                    <SelectItem value="no_show">No Show</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="source">Source</Label>
+              <Input
+                id="source"
+                value={formData.source}
+                onChange={(e) => handleInputChange('source', e.target.value)}
+                placeholder="manual"
+              />
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isAdding}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isAdding} className="bg-brand-teal hover:bg-brand-teal/90">
+            {isAdding ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Registration
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function DatabasePage() {
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -252,6 +501,8 @@ export default function DatabasePage() {
   const [deletingRegistration, setDeletingRegistration] = useState<RegistrationRecord | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
   const [filters, setFilters] = useState<DatabaseFilters>({
     audience: 'all',
@@ -387,6 +638,33 @@ export default function DatabasePage() {
     }
   };
 
+  const handleAddNew = async (data: NewRegistrationData) => {
+    setIsAdding(true);
+    try {
+      const response = await axios.post('/api/database/registrations', data);
+
+      if (response.data.success) {
+        // Refresh the registrations list
+        await fetchRegistrations();
+
+        // Show success message
+        alert('Registration created successfully!');
+      } else {
+        throw new Error(response.data.message || 'Failed to create registration');
+      }
+    } catch (error: any) {
+      console.error('Error creating registration:', error);
+      if (error.response?.data?.detail) {
+        alert(`Error creating registration: ${error.response.data.detail}`);
+      } else {
+        alert('Error creating registration. Please try again.');
+      }
+      throw error; // Re-throw to prevent modal from closing
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   const handleExport = async (format: 'csv' | 'xlsx') => {
     try {
       const params: any = {};
@@ -448,10 +726,14 @@ export default function DatabasePage() {
         </div>
 
         <Tabs defaultValue="registrations" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 bg-white rounded-2xl shadow-sm border">
+          <TabsList className="grid w-full grid-cols-3 bg-white rounded-2xl shadow-sm border">
             <TabsTrigger value="registrations" className="flex items-center gap-2 data-[state=active]:bg-brand-teal data-[state=active]:text-white">
               <Database className="h-4 w-4" />
               Registrations
+            </TabsTrigger>
+            <TabsTrigger value="duplicate-review" className="flex items-center gap-2 data-[state=active]:bg-brand-teal data-[state=active]:text-white">
+              <UserX className="h-4 w-4" />
+              Duplicate Review
             </TabsTrigger>
             <TabsTrigger value="name-review" className="flex items-center gap-2 data-[state=active]:bg-brand-teal data-[state=active]:text-white">
               <Users className="h-4 w-4" />
@@ -556,6 +838,13 @@ export default function DatabasePage() {
           Showing {registrations.length} of {totalItems} registrations
         </div>
         <div className="flex gap-2">
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-brand-teal text-white hover:bg-brand-teal/90"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add New Registration
+            </Button>
             <Button variant="outline" onClick={() => handleExport('csv')} className="border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white">
               <Download className="h-4 w-4 mr-2" />
               Export CSV
@@ -686,12 +975,16 @@ export default function DatabasePage() {
 
         </TabsContent>
 
+        <TabsContent value="duplicate-review" className="space-y-6">
+          <DuplicateReviewPage />
+        </TabsContent>
+
         <TabsContent value="name-review">
           <div className="text-center py-8">
             <h3 className="text-lg font-medium">Name Review</h3>
             <p className="text-muted-foreground">Name review functionality temporarily disabled</p>
           </div>
-          </TabsContent>
+        </TabsContent>
 
         </Tabs>
 
@@ -714,6 +1007,14 @@ export default function DatabasePage() {
           }}
           onConfirm={confirmDelete}
           isDeleting={isDeleting}
+        />
+
+        <AddNewRegistrationModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSave={handleAddNew}
+          activities={activities}
+          isAdding={isAdding}
         />
       </div>
     </div>

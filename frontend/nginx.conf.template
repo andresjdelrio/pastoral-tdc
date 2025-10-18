@@ -1,5 +1,5 @@
 server {
-    listen ${PORT:-80};
+    listen ${PORT};
     server_name localhost;
     root /usr/share/nginx/html;
     index index.html;
@@ -10,9 +10,9 @@ server {
     gzip_min_length 1024;
     gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
 
-    # Proxy API requests to backend (use env var or fallback)
+    # Proxy API requests to backend
     location /api {
-        proxy_pass ${BACKEND_URL:-http://localhost:8000};
+        proxy_pass ${BACKEND_URL};
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

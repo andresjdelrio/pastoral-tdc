@@ -126,7 +126,8 @@ class CatalogCareer(Base):
     __tablename__ = "catalog_careers"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(200), nullable=False, unique=True)
+    name = Column(String(200), nullable=False)
+    audience = Column(String(20), nullable=False, default='estudiantes')  # estudiantes, colaboradores
     active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

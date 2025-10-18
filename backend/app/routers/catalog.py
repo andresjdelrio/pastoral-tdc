@@ -65,12 +65,14 @@ class Activity(ActivityBase):
 
 class CareerBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
+    audience: str = Field(..., pattern="^(estudiantes|colaboradores)$")
 
 class CareerCreate(CareerBase):
     active: bool = True
 
 class CareerUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=200)
+    audience: Optional[str] = Field(None, pattern="^(estudiantes|colaboradores)$")
     active: Optional[bool] = None
 
 class Career(CareerBase):
@@ -375,6 +377,7 @@ async def list_careers(
         careers.append({
             "id": item.id,
             "name": item.name,
+            "audience": item.audience,
             "active": item.active,
             "created_at": item.created_at.isoformat() if item.created_at else None,
             "updated_at": item.updated_at.isoformat() if item.updated_at else None

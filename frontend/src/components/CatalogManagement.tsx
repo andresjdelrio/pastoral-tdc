@@ -71,6 +71,7 @@ type CatalogType = 'strategic_lines' | 'activities' | 'careers';
 interface FormData {
   name: string;
   strategic_line_id?: number;
+  audience?: string;
   active: boolean;
 }
 
@@ -146,6 +147,7 @@ export default function CatalogManagement({ onClose }: CatalogManagementProps) {
     setFormData({
       name: '',
       strategic_line_id: undefined,
+      audience: 'estudiantes',
       active: true
     });
     setShowForm(true);
@@ -156,6 +158,7 @@ export default function CatalogManagement({ onClose }: CatalogManagementProps) {
     setFormData({
       name: item.name,
       strategic_line_id: item.strategic_line_id,
+      audience: item.audience || 'estudiantes',
       active: item.active
     });
     setShowForm(true);
@@ -177,6 +180,10 @@ export default function CatalogManagement({ onClose }: CatalogManagementProps) {
 
       if (activeTab === 'activities' && formData.strategic_line_id) {
         data.strategic_line_id = formData.strategic_line_id;
+      }
+
+      if (activeTab === 'careers') {
+        data.audience = formData.audience || 'estudiantes';
       }
 
       if (editingItem) {
@@ -260,7 +267,7 @@ export default function CatalogManagement({ onClose }: CatalogManagementProps) {
         break;
       case 'careers':
         data = careers;
-        columns = ['Nombre', 'Estado', 'Creado', 'Acciones'];
+        columns = ['Nombre', 'Audiencia', 'Estado', 'Creado', 'Acciones'];
         break;
     }
 
@@ -296,6 +303,13 @@ export default function CatalogManagement({ onClose }: CatalogManagementProps) {
                 <TableCell className="font-medium">{item.name}</TableCell>
                 {activeTab === 'activities' && (
                   <TableCell>{item.strategic_line_name}</TableCell>
+                )}
+                {activeTab === 'careers' && (
+                  <TableCell>
+                    <Badge variant={item.audience === 'estudiantes' ? 'default' : 'secondary'}>
+                      {item.audience === 'estudiantes' ? 'Estudiantes' : 'Colaboradores'}
+                    </Badge>
+                  </TableCell>
                 )}
                 <TableCell>
                   <Badge variant={item.active ? 'default' : 'outline'}>
@@ -349,7 +363,7 @@ export default function CatalogManagement({ onClose }: CatalogManagementProps) {
       case 'activities':
         return 'Actividades';
       case 'careers':
-        return 'Carreras';
+        return 'Carreras / Áreas';
     }
   };
 
@@ -451,9 +465,27 @@ export default function CatalogManagement({ onClose }: CatalogManagementProps) {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Nombre del elemento"
+                placeholder={activeTab === 'careers' ? 'Ej: Ingeniería Civil, Facultad de Medicina' : 'Nombre del elemento'}
               />
             </div>
+
+            {activeTab === 'careers' && (
+              <div>
+                <label className="text-sm font-medium">Audiencia</label>
+                <Select
+                  value={formData.audience || 'estudiantes'}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, audience: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar audiencia" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="estudiantes">Estudiantes (Carreras)</SelectItem>
+                    <SelectItem value="colaboradores">Colaboradores (Áreas de Trabajo)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {activeTab === 'activities' && (
               <div>

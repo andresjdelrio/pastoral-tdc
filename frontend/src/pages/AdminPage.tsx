@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import CatalogManagement from '@/components/CatalogManagement';
 import DataQualityModule from '@/components/DataQualityModule';
 import UserManagement from '@/components/UserManagement';
-import { BookOpen, Settings, Upload, AlertTriangle, Database, FileX, Users } from 'lucide-react';
+import { BookOpen, FileX, Users, Settings } from 'lucide-react';
 
 export default function AdminPage() {
   const [showCatalogManagement, setShowCatalogManagement] = useState(false);
@@ -26,38 +26,21 @@ export default function AdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Admin</h1>
+        <h1 className="text-3xl font-bold">Administración</h1>
         <p className="text-muted-foreground">
-          Administrative tools for data management and bulk operations
+          Herramientas administrativas para gestión de usuarios, catálogos y calidad de datos
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="cursor-pointer hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <BookOpen className="h-5 w-5" />
-              <span>Catalog Management</span>
+              <Users className="h-5 w-5 text-blue-600" />
+              <span>Gestión de Usuarios</span>
             </CardTitle>
             <CardDescription>
-              Manage controlled vocabularies for strategic lines, activities, and careers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => setShowCatalogManagement(true)} className="w-full">
-              Abrir Gestión de Catálogos
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Users className="h-5 w-5" />
-              <span>User Management</span>
-            </CardTitle>
-            <CardDescription>
-              Manage system users, roles, and permissions
+              Administrar usuarios del sistema, roles y permisos de acceso
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -67,59 +50,31 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="cursor-pointer hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Database className="h-5 w-5" />
-              <span>Database Editing</span>
+              <BookOpen className="h-5 w-5 text-green-600" />
+              <span>Gestión de Catálogos</span>
             </CardTitle>
             <CardDescription>
-              Edit registrant information and manage attendance
+              Administrar vocabularios controlados: líneas estratégicas, actividades y carreras
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Database editing tools will be implemented here</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Settings className="h-5 w-5" />
-              <span>Bulk Operations</span>
-            </CardTitle>
-            <CardDescription>
-              Perform bulk updates and data management tasks
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Bulk operations tools will be implemented here</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Upload className="h-5 w-5" />
-              <span>Upload History</span>
-            </CardTitle>
-            <CardDescription>
-              View and manage CSV upload history
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Upload history will be displayed here</p>
+            <Button onClick={() => setShowCatalogManagement(true)} className="w-full">
+              Gestionar Catálogos
+            </Button>
           </CardContent>
         </Card>
 
         <Card className="cursor-pointer hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <FileX className="h-5 w-5" />
-              <span>Data Quality</span>
+              <FileX className="h-5 w-5 text-orange-600" />
+              <span>Calidad de Datos</span>
             </CardTitle>
             <CardDescription>
-              Monitor validation errors and data quality metrics
+              Monitorear errores de validación y métricas de calidad de datos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -128,19 +83,34 @@ export default function AdminPage() {
             </Button>
           </CardContent>
         </Card>
+      </div>
 
-        <Card>
+      <div className="mt-8">
+        <Card className="bg-gray-50">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5" />
-              <span>Reconciliation</span>
+              <Settings className="h-5 w-5 text-gray-600" />
+              <span>Otros Módulos</span>
             </CardTitle>
             <CardDescription>
-              Map unknown values to catalog items during ingestion
+              Herramientas administrativas adicionales disponibles en otros módulos
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Reconciliation tools will be implemented here</p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-start space-x-2">
+                <span className="font-medium text-gray-700 min-w-[140px]">Base de Datos:</span>
+                <span>Edición de registros, gestión de asistencia y búsqueda de duplicados</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="font-medium text-gray-700 min-w-[140px]">Archivos:</span>
+                <span>Historial de cargas CSV y gestión de archivos</span>
+              </div>
+              <div className="flex items-start space-x-2">
+                <span className="font-medium text-gray-700 min-w-[140px]">Carga:</span>
+                <span>Importación de nuevos registros desde archivos CSV</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

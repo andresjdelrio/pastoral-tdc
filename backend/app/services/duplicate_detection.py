@@ -445,7 +445,8 @@ class DuplicateDetectionService:
         review_id: int,
         decision: str,
         decided_by: str,
-        canonical_name: Optional[str] = None
+        canonical_name: Optional[str] = None,
+        canonical_registrant_id: Optional[int] = None
     ) -> Dict[str, any]:
         """
         Process a human review decision.
@@ -483,8 +484,8 @@ class DuplicateDetectionService:
                 'updated_registrants': []
             }
 
-            # If accepted, update canonical names
-            if decision == 'accept' and canonical_name:
+            # If accepted, merge registrants
+            if decision == 'accept' and canonical_name and canonical_registrant_id:
                 # Get both registrants
                 left_registrant = self.db.query(Registrant).filter(
                     Registrant.id == review.left_id
@@ -494,22 +495,65 @@ class DuplicateDetectionService:
                 ).first()
 
                 if left_registrant and right_registrant:
-                    # Update canonical names
-                    left_registrant.canonical_full_name = canonical_name
-                    right_registrant.canonical_full_name = canonical_name
+                    # Determine which is canonical and which is duplicate
+                    if canonical_registrant_id == left_registrant.id:
+                        canonical_reg = left_registrant
+                        duplicate_reg = right_registrant
+                    elif canonical_registrant_id == right_registrant.id:
+                        canonical_reg = right_registrant
+                        duplicate_reg = left_registrant
+                    else:
+                        raise ValueError(f"canonical_registrant_id {canonical_registrant_id} must be either left_id or right_id")
+
+                    # Merge registrations: move all registrations from duplicate to canonical
+                    from app.models import Registration
+                    duplicate_registrations = self.db.query(Registration).filter(
+                        Registration.registrant_id == duplicate_reg.id
+                    ).all()
+
+                    registrations_merged = 0
+                    for reg in duplicate_registrations:
+                        # Check if canonical already has a registration for this activity
+                        existing_reg = self.db.query(Registration).filter(
+                            Registration.registrant_id == canonical_reg.id,
+                            Registration.activity_id == reg.activity_id
+                        ).first()
+
+                        if not existing_reg:
+                            # Move registration to canonical registrant
+                            reg.registrant_id = canonical_reg.id
+                            registrations_merged += 1
+                        # If exists, we skip (canonical already participated in this activity)
+
+                    # Update canonical name for both (to keep track)
+                    canonical_reg.canonical_full_name = canonical_name
+                    duplicate_reg.canonical_full_name = canonical_name
+
+                    # Merge non-empty fields from duplicate to canonical if canonical field is empty
+                    if not canonical_reg.rut and duplicate_reg.rut:
+                        canonical_reg.rut = duplicate_reg.rut
+                    if not canonical_reg.university_email and duplicate_reg.university_email:
+                        canonical_reg.university_email = duplicate_reg.university_email
+                    if not canonical_reg.phone and duplicate_reg.phone:
+                        canonical_reg.phone = duplicate_reg.phone
+                    if not canonical_reg.career and duplicate_reg.career:
+                        canonical_reg.career = duplicate_reg.career
 
                     result['updated_registrants'] = [
                         {
-                            'id': left_registrant.id,
-                            'old_canonical_name': left_registrant.canonical_full_name,
-                            'new_canonical_name': canonical_name
+                            'id': canonical_reg.id,
+                            'role': 'canonical',
+                            'canonical_name': canonical_name,
+                            'registrations_merged': registrations_merged
                         },
                         {
-                            'id': right_registrant.id,
-                            'old_canonical_name': right_registrant.canonical_full_name,
-                            'new_canonical_name': canonical_name
+                            'id': duplicate_reg.id,
+                            'role': 'duplicate',
+                            'canonical_name': canonical_name,
+                            'registrations_moved': registrations_merged
                         }
                     ]
+                    result['registrations_merged'] = registrations_merged
 
             self.db.commit()
             return result

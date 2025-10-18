@@ -47,6 +47,7 @@ const DuplicateReviewPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
   const [processingDecision, setProcessingDecision] = useState(false);
   const [canonicalName, setCanonicalName] = useState('');
+  const [canonicalRegistrantId, setCanonicalRegistrantId] = useState<number | null>(null);
   const [editingRegistrant, setEditingRegistrant] = useState<{ side: 'left' | 'right'; registrant: Registrant } | null>(null);
   const [editForm, setEditForm] = useState<Partial<Registrant>>({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -82,7 +83,7 @@ const DuplicateReviewPage: React.FC = () => {
     fetchReviewItems();
   }, [currentPage, statusFilter, audienceFilter]);
 
-  const handleDecision = async (reviewId: number, decision: string, canonicalNameValue?: string) => {
+  const handleDecision = async (reviewId: number, decision: string, canonicalNameValue?: string, canonicalRegId?: number) => {
     setProcessingDecision(true);
     try {
       const response = await fetch(`/api/names/review/${reviewId}/decision`, {
@@ -94,6 +95,7 @@ const DuplicateReviewPage: React.FC = () => {
           decision,
           decided_by: 'admin', // In a real app, this would be the current user
           canonical_name: canonicalNameValue,
+          canonical_registrant_id: canonicalRegId,
         }),
       });
 
@@ -102,6 +104,7 @@ const DuplicateReviewPage: React.FC = () => {
         await fetchReviewItems();
         setSelectedItem(null);
         setCanonicalName('');
+        setCanonicalRegistrantId(null);
       } else {
         const error = await response.json();
         alert(`Error: ${error.detail}`);
@@ -473,18 +476,65 @@ const DuplicateReviewPage: React.FC = () => {
                   <RegistrantCard registrant={selectedItem.right_registrant} title="Registrant 2" side="right" />
                 </div>
 
-                <div className="mb-6">
-                  <label htmlFor="canonical-name" className="block text-sm font-medium text-gray-700 mb-2">
-                    Canonical Name (if accepting as duplicate):
-                  </label>
-                  <input
-                    type="text"
-                    id="canonical-name"
-                    value={canonicalName}
-                    onChange={(e) => setCanonicalName(e.target.value)}
-                    placeholder="Enter the canonical name to use for both registrants"
-                    className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
+                <div className="mb-6 space-y-4">
+                  <div>
+                    <label htmlFor="canonical-name" className="block text-sm font-medium text-gray-700 mb-2">
+                      Canonical Name (if accepting as duplicate):
+                    </label>
+                    <input
+                      type="text"
+                      id="canonical-name"
+                      value={canonicalName}
+                      onChange={(e) => setCanonicalName(e.target.value)}
+                      placeholder="Enter the canonical name to use for both registrants"
+                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Canonical Record (to merge all data into):
+                    </label>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setCanonicalRegistrantId(selectedItem.left_registrant.id)}
+                        className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
+                          canonicalRegistrantId === selectedItem.left_registrant.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className="font-semibold text-sm text-gray-900">Registrant 1</div>
+                          <div className="text-sm text-gray-600 mt-1">{selectedItem.left_registrant.full_name}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {selectedItem.left_registrant.university_email || 'No email'}
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCanonicalRegistrantId(selectedItem.right_registrant.id)}
+                        className={`flex-1 p-4 rounded-lg border-2 transition-colors ${
+                          canonicalRegistrantId === selectedItem.right_registrant.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-300 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className="font-semibold text-sm text-gray-900">Registrant 2</div>
+                          <div className="text-sm text-gray-600 mt-1">{selectedItem.right_registrant.full_name}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {selectedItem.right_registrant.university_email || 'No email'}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      All registrations from the non-canonical record will be merged into the selected canonical record. Missing data will also be merged.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-end space-x-3">
@@ -515,8 +565,8 @@ const DuplicateReviewPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDecision(selectedItem.id, 'accept', canonicalName)}
-                    disabled={processingDecision || !canonicalName.trim()}
+                    onClick={() => handleDecision(selectedItem.id, 'accept', canonicalName, canonicalRegistrantId!)}
+                    disabled={processingDecision || !canonicalName.trim() || !canonicalRegistrantId}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />

@@ -41,6 +41,7 @@ interface Activity {
   name: string;
   strategic_line: string;
   year: number;
+  audience: string;
 }
 
 interface PaginatedResponse<T> {
@@ -276,6 +277,11 @@ function AddNewRegistrationModal({ isOpen, onClose, onSave, activities, isAdding
 
   const [errors, setErrors] = useState<Partial<NewRegistrationData>>({});
 
+  const formatActivityDisplay = (activity: Activity) => {
+    const audienceLabel = activity.audience === 'estudiantes' ? 'Estudiantes' : 'Colaboradores';
+    return `${activity.name} - ${audienceLabel}`;
+  };
+
   const handleInputChange = (field: keyof NewRegistrationData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -428,7 +434,7 @@ function AddNewRegistrationModal({ isOpen, onClose, onSave, activities, isAdding
                   <SelectContent>
                     {activities.map((activity) => (
                       <SelectItem key={activity.id} value={activity.id.toString()}>
-                        {activity.name} ({activity.strategic_line}, {activity.year})
+                        {formatActivityDisplay(activity)} ({activity.strategic_line}, {activity.year})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -510,6 +516,11 @@ export default function DatabasePage() {
     activity: 'all',
     search: ''
   });
+
+  const formatActivityDisplay = (activity: Activity) => {
+    const audienceLabel = activity.audience === 'estudiantes' ? 'Estudiantes' : 'Colaboradores';
+    return `${activity.name} - ${audienceLabel}`;
+  };
 
   const perPage = 50;
 
@@ -735,10 +746,6 @@ export default function DatabasePage() {
               <UserX className="h-4 w-4" />
               Duplicate Review
             </TabsTrigger>
-            <TabsTrigger value="name-review" className="flex items-center gap-2 data-[state=active]:bg-brand-teal data-[state=active]:text-white">
-              <Users className="h-4 w-4" />
-              Name Review
-            </TabsTrigger>
           </TabsList>
 
         <TabsContent value="registrations" className="space-y-6">
@@ -811,7 +818,7 @@ export default function DatabasePage() {
                   <SelectItem value="all">All activities</SelectItem>
                   {activities.map((activity) => (
                     <SelectItem key={activity.id} value={activity.id.toString()}>
-                      {activity.name} ({activity.year})
+                      {formatActivityDisplay(activity)} ({activity.year})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -979,12 +986,6 @@ export default function DatabasePage() {
           <DuplicateReviewPage />
         </TabsContent>
 
-        <TabsContent value="name-review">
-          <div className="text-center py-8">
-            <h3 className="text-lg font-medium">Name Review</h3>
-            <p className="text-muted-foreground">Name review functionality temporarily disabled</p>
-          </div>
-        </TabsContent>
 
         </Tabs>
 

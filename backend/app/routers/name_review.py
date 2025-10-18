@@ -38,6 +38,7 @@ class ReviewDecisionRequest(BaseModel):
     decision: str  # 'accept', 'reject', 'skip'
     decided_by: str
     canonical_name: Optional[str] = None
+    canonical_registrant_id: Optional[int] = None  # ID of the registrant to keep as canonical
 
 class RegistrantUpdateRequest(BaseModel):
     full_name: Optional[str] = None
@@ -229,12 +230,17 @@ async def make_review_decision(
                 detail=f"Invalid decision. Must be one of: {', '.join(valid_decisions)}"
             )
 
-        # Validate canonical name if accepting
+        # Validate canonical name and registrant ID if accepting
         if request.decision == 'accept':
             if not request.canonical_name or not request.canonical_name.strip():
                 raise HTTPException(
                     status_code=400,
                     detail="canonical_name is required when accepting a duplicate"
+                )
+            if not request.canonical_registrant_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="canonical_registrant_id is required when accepting a duplicate"
                 )
 
         service = DuplicateDetectionService(db)
@@ -242,7 +248,8 @@ async def make_review_decision(
             review_id=review_id,
             decision=request.decision,
             decided_by=request.decided_by,
-            canonical_name=request.canonical_name
+            canonical_name=request.canonical_name,
+            canonical_registrant_id=request.canonical_registrant_id
         )
 
         return {

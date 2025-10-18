@@ -1,32 +1,46 @@
-databases:
-  - name: pastoral-db
-    databaseName: pastoral_tdc
-    user: pastoral_user
-
 services:
+  # Redis Service
+  - type: redis
+    name: pastoral-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+  # Backend Service
   - type: web
     name: pastoral-backend
-    env: python
-    region: oregon
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     plan: free
-    buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: pastoral-db
+        value: sqlite:///data/app.db
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: pastoral-redis
           property: connectionString
-      - key: JWT_SECRET_KEY
+      - key: SECRET_KEY
         generateValue: true
+      - key: ENVIRONMENT
+        value: production
       - key: PORT
-        value: "10000"
+        value: 8000
+    healthCheckPath: /api/health
+    autoDeploy: true
 
+  # Frontend Service
   - type: web
     name: pastoral-frontend
-    env: static
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
     plan: free
-    buildCommand: "cd frontend && npm install && npm run build:prod"
-    staticPublishPath: frontend/dist
     envVars:
       - key: VITE_API_URL
-        value: https://pastoral-backend.onrender.com
+        fromService:
+          type: web
+          name: pastoral-backend
+          property: url
+    autoDeploy: true

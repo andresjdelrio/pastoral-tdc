@@ -11,6 +11,9 @@ else
     echo "Migration failed or not needed - FastAPI will create tables automatically"
 fi
 
+# Use PORT environment variable if set, otherwise default to 8000
+PORT=${PORT:-8000}
+
 # Start the FastAPI server
-echo "Starting uvicorn server..."
-exec uvicorn main:app --host 0.0.0.0 --port 8000
+echo "Starting uvicorn server on port $PORT..."
+exec uvicorn main:app --host 0.0.0.0 --port $PORT

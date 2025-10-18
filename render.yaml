@@ -37,4 +37,9 @@ services:
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     plan: free
+    envVars:
+      - key: PORT
+        value: 80
+      - key: BACKEND_URL
+        value: https://pastoral-backend.onrender.com
     autoDeploy: true

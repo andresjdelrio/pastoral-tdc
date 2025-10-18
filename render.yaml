@@ -37,10 +37,4 @@ services:
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     plan: free
-    envVars:
-      - key: VITE_API_URL
-        fromService:
-          type: web
-          name: pastoral-backend
-          property: url
     autoDeploy: true

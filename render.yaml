@@ -1,4 +1,10 @@
 services:
+  # PostgreSQL Database
+  - type: pserv
+    name: pastoral-database
+    plan: free
+    ipAllowList: []
+
   # Redis Service
   - type: redis
     name: pastoral-redis
@@ -15,7 +21,9 @@ services:
     plan: free
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///data/app.db
+        fromDatabase:
+          name: pastoral-database
+          property: connectionString
       - key: REDIS_URL
         fromService:
           type: redis

@@ -440,3 +440,84 @@ async def get_indicators(db: Session = Depends(get_db)):
     logger.info("Indicators data computed and cached")
 
     return result
+@router.get("/annual-chart")
+async def get_annual_chart_data(db: Session = Depends(get_db)):
+    """
+    Get yearly data optimized for the annual bar chart visualization.
+    Returns:
+    - Inscripciones totales (total registrations per year)
+    - Participaciones totales (total attendances per year)
+    - Personas Inscritas (unique people registered using person_id)
+    - Personas Participantes (unique people who attended using person_id)
+    - Tasa de Conversión (participation rate %)
+    """
+    
+    # Query for yearly statistics using person_id for unique person counts
+    query = text("""
+    WITH yearly_stats AS (
+        SELECT
+            a.year,
+            COUNT(*) as total_inscripciones,
+            SUM(CASE WHEN reg.attended = 1 THEN 1 ELSE 0 END) as total_participaciones,
+            COUNT(DISTINCT COALESCE(r.person_id, r.id)) as personas_inscritas,
+            COUNT(DISTINCT CASE WHEN reg.attended = 1 THEN COALESCE(r.person_id, r.id) END) as personas_participantes
+        FROM registrations reg
+        JOIN activities a ON reg.activity_id = a.id
+        JOIN registrants r ON reg.registrant_id = r.id
+        GROUP BY a.year
+        ORDER BY a.year
+    )
+    SELECT
+        year,
+        total_inscripciones,
+        total_participaciones,
+        personas_inscritas,
+        personas_participantes,
+        ROUND(
+            CASE
+                WHEN total_inscripciones > 0
+                THEN (total_participaciones * 100.0 / total_inscripciones)
+                ELSE 0
+            END, 1
+        ) as tasa_conversion
+    FROM yearly_stats
+    """)
+    
+    results = db.execute(query).fetchall()
+    
+    # Format results for frontend
+    chart_data = []
+    for row in results:
+        chart_data.append({
+            'year': row.year,
+            'inscripciones': row.total_inscripciones,
+            'participaciones': row.total_participaciones,
+            'personas_inscritas': row.personas_inscritas,
+            'personas_participantes': row.personas_participantes,
+            'tasa_conversion': row.tasa_conversion
+        })
+    
+    return {
+        'data': chart_data,
+        'total': {
+            'inscripciones': sum(d['inscripciones'] for d in chart_data),
+            'participaciones': sum(d['participaciones'] for d in chart_data),
+            # For total, use DISTINCT across ALL years using person_id
+            'personas_inscritas': db.execute(text("""
+                SELECT COUNT(DISTINCT COALESCE(r.person_id, r.id))
+                FROM registrations reg
+                JOIN registrants r ON reg.registrant_id = r.id
+            """)).scalar(),
+            'personas_participantes': db.execute(text("""
+                SELECT COUNT(DISTINCT COALESCE(r.person_id, r.id))
+                FROM registrations reg
+                JOIN registrants r ON reg.registrant_id = r.id
+                WHERE reg.attended = 1
+            """)).scalar(),
+            'tasa_conversion': round(
+                (sum(d['participaciones'] for d in chart_data) * 100.0 / sum(d['inscripciones'] for d in chart_data))
+                if sum(d['inscripciones'] for d in chart_data) > 0 else 0,
+                1
+            )
+        }
+    }

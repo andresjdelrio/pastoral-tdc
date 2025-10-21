@@ -20,6 +20,9 @@ class Registrant(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    # Canonical person identifier - used for deduplication and counting unique people
+    person_id = Column(Integer, nullable=True, index=True)  # References the canonical registrant ID (self-referential)
+
     # Canonical fields from CSV (normalized)
     full_name = Column(String(200), nullable=False)
     rut = Column(String(20), nullable=True, index=True)
